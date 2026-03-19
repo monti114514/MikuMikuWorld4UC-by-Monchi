@@ -523,6 +523,9 @@ namespace MikuMikuWorld
 			int layer = std::clamp(noteData.layer, 0, (int)context.score.layers.size() - 1);
 			double scaled_tm = layer_stm[layer];
 
+			if (scaled_tm < tick.visualTime.min)
+				continue;
+
 			float y = (float)Engine::approach(tick.visualTime.min, tick.visualTime.max, scaled_tm);
 			
 			//  Y座標クリッピング

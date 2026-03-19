@@ -156,11 +156,11 @@ namespace MikuMikuWorld
 	}
 
 	bool UI::addDoubleProperty(const char* label, double& val, const char* format,
-	                           double lowerBound, double higherBound)
+	                           double lowerBound, double higherBound, double step)
 	{
 		propertyLabel(label);
 
-		bool edited = ImGui::InputDouble(labelID(label), &val, 1.0, 10.0, format);
+		bool edited = ImGui::InputDouble(labelID(label), &val, step, 10.0, format);
 		if (edited && lowerBound != higherBound)
 			val = std::clamp(val, lowerBound, higherBound);
 		ImGui::NextColumn();

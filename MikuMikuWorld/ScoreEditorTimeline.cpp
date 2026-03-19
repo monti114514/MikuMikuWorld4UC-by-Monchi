@@ -121,10 +121,11 @@ namespace MikuMikuWorld
 		float paddingY = 30.0f;
 		ImVec2 windowEndTop = ImGui::GetWindowPos() +
 		                      ImVec2{ ImGui::GetWindowSize().x - scrollbarWidth - 4, paddingY };
+
 		ImVec2 windowEndBottom =
 		    windowEndTop +
 		    ImVec2{ scrollbarWidth + 2,
-			        ImGui::GetWindowSize().y - (paddingY * 1.3f) - UI::toolbarBtnSize.y - 5 };
+			        ImGui::GetWindowSize().y - (paddingY * 1.3f) - (UI::toolbarBtnSize.y * 2.0f + ImGui::GetStyle().ItemSpacing.y) - 5 };
 
 		// calculate handle height
 		float heightRatio = size.y / ((maxOffset - minOffset) * zoom);
@@ -417,7 +418,8 @@ namespace MikuMikuWorld
 
 		// Make space for the scrollbar and the status bar
 		size = ImGui::GetContentRegionAvail() -
-		       ImVec2{ ImGui::GetStyle().ScrollbarSize, UI::toolbarBtnSize.y };
+		       ImVec2{ ImGui::GetStyle().ScrollbarSize, UI::toolbarBtnSize.y * 2.0f + ImGui::GetStyle().ItemSpacing.y };
+
 		position = ImGui::GetCursorScreenPos();
 		boundaries = ImRect(position, position + size);
 		mouseInTimeline = ImGui::IsMouseHoveringRect(position, position + size);
@@ -942,12 +944,11 @@ namespace MikuMikuWorld
 		                          playbackSpeed < maxPlaybackSpeed))
 			setPlaybackSpeed(context, playbackSpeed + 0.25f);
 
-		ImGui::SameLine();
-		ImGui::SeparatorEx(ImGuiSeparatorFlags_Vertical);
-		ImGui::SameLine();
-
+		// ここで改行するために SameLine と Separator を削除します
+		
 		int currentMeasure =
 		    accumulateMeasures(context.currentTick, TICKS_PER_BEAT, context.score.timeSignatures);
+
 		const TimeSignature& ts =
 		    context.score
 		        .timeSignatures[findTimeSignature(currentMeasure, context.score.timeSignatures)];
@@ -3310,7 +3311,9 @@ namespace MikuMikuWorld
 	float laneWidth = 100.0f * dpiScale;
 	float laneEndX = laneStartX + laneWidth;
 	
-	ImU32 bgColor = IM_COL32(20, 20, 20, 150);
+	// configの値 (0.0~1.0) を 0~255 に変換して適用
+	int bgAlpha = std::clamp((int)(config.hiSpeedGraphBgOpacity * 255.0f), 0, 255);
+	ImU32 bgColor = IM_COL32(31, 26, 28, bgAlpha);
 	drawList->AddRectFilled(ImVec2(laneStartX, position.y), ImVec2(laneEndX, position.y + size.y), bgColor);
 
 	float padding = 15.0f * dpiScale;

@@ -19,7 +19,7 @@ namespace MikuMikuWorld
 {
 	void ChartGalleryWindow::loadGalleryData()
 	{
-		std::string path = Application::getAppDir() + "gallery.json";
+		std::string path = Application::getAppDir() + "gallery_config.json";
 		std::ifstream file(IO::mbToWideStr(path)); 
 		if (file.is_open()) {
 			nlohmann::json j;
@@ -68,7 +68,7 @@ namespace MikuMikuWorld
 		j["folders"] = customFolders;
 		j["searchPaths"] = searchPaths;
 		j["isSearchPathsOpen"] = isSearchPathsOpen;
-		std::string path = Application::getAppDir() + "gallery.json";
+		std::string path = Application::getAppDir() + "gallery_config.json";
 		std::ofstream file(IO::mbToWideStr(path));
 		if (file.is_open()) {
 			file << j.dump(4);

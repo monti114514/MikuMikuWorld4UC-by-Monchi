@@ -91,6 +91,7 @@ background_image,背景画像
 draw_background,背景画像を描く
 background_brightnes,背景の明るさ
 lanes_opacity,レーンの不透明度
+hispeed_graph_bg_opacity, ハイスピードグラフの背景の不透明度
 video, 画面
 notes_se, ノーツSE
 show_tick_in_properties, プロパティにTickを表示

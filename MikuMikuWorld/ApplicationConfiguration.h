@@ -116,6 +116,7 @@ namespace MikuMikuWorld
 		bool showTickInProperties;
 		bool drawHiSpeedAutomation;
 		float hiSpeedGraphLimit;
+		float hiSpeedGraphBgOpacity;
 		bool autoSaveEnabled;
 		int autoSaveInterval;
 		int autoSaveMaxCount;

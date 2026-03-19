@@ -87,8 +87,8 @@ namespace MikuMikuWorld
 			drawWaveform = jsonIO::tryGetValue<bool>(config["timeline"], "draw_waveform", true);
 
 			drawHiSpeedAutomation = jsonIO::tryGetValue<bool>(config["timeline"], "draw_hispeed_automation", true);
-
 			hiSpeedGraphLimit = jsonIO::tryGetValue<float>(config["timeline"], "hispeed_graph_limit", 5.0f);
+			hiSpeedGraphBgOpacity = jsonIO::tryGetValue<float>(config["timeline"], "hispeed_graph_bg_opacity", 0.59f);
 
 			returnToLastSelectedTickOnPause = jsonIO::tryGetValue<bool>(
 			    config["timeline"], "return_to_last_tick_on_pause", false);
@@ -200,6 +200,7 @@ namespace MikuMikuWorld
 			                   { "draw_waveform", drawWaveform },
 			                   { "draw_hispeed_automation", drawHiSpeedAutomation },
 			                   { "hispeed_graph_limit", hiSpeedGraphLimit },
+			                   { "hispeed_graph_bg_opacity", hiSpeedGraphBgOpacity },
 			                   { "return_to_last_tick_on_pause", returnToLastSelectedTickOnPause },
 			                   { "cursor_position_threshold", cursorPositionThreshold },
 			                   { "show_tick_in_properties", showTickInProperties } };
@@ -288,6 +289,7 @@ namespace MikuMikuWorld
 		drawWaveform = true;
 		drawHiSpeedAutomation = true;
 		hiSpeedGraphLimit = 5.0f;
+		hiSpeedGraphBgOpacity = 0.59f;
 		showTickInProperties = false;
 		followCursorInPlayback = true;
 		returnToLastSelectedTickOnPause = false;
