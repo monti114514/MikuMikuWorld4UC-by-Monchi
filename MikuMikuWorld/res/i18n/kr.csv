@@ -2,7 +2,6 @@
 # key, value
 
 language_name,한글
-translator,fjordic
 
 # menu bar
 file,파일
@@ -231,7 +230,6 @@ note_properties_hold_note,홀드 속성
 note_properties_guide,가이드 속성
 note_properties_not_selected,선택한 노트가 없습니다
 note_properties_many_hold_notes,1개 이상의 홀드가 선택되었습니다.
-translated_by,%s님의 번역
 zoom_tooltip,확대/축소 툴팁
 
 # preset manager

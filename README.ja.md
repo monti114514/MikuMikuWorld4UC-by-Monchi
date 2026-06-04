@@ -1,34 +1,30 @@
-[English](./README.md) / **日本語**
+[English](./README.md) / **Japanese**
 
-# MikuMikuWorld for UntitledCharts
-[MikuMikuWorld](https://github.com/crash5band/MikuMikuWorld)の[UntitledCharts](https://untitledcharts.com/)用フォーク。
+# MikuMikuWorld for UntitledCharts by Monchi
 
-## 追加された機能：
-MikuMikuWorldの元の機能に加え、以下の機能が追加されています：
-- ダメージノーツ
-- 拡張レーン
-- ガイドの色付け
-- 新しいイ－ジング
-- ハイスピードの補間
-- スライドの中継点の繰り返し
-- ノーツプロパティパネル
-- 小数点のノーツレーンと幅のサポート
+MikuMikuWorld for UntitledCharts by Monchi（MMW4UCbyMonchi）は、[MikuMikuWorld for UntitledCharts](https://github.com/UntitledCharts/MikuMikuWorld4UC) を直接のベースにしたフォークです。
 
-## 翻訳：
-翻訳に貢献したい場合は、[ガイド](./TRANSLATION.md)を参照してください。
-- Español（スペイン語）：@mi.honesta.reaccion
-- Русский（ロシア語）：@\_notfallen\_
-- Tiếng Việt（ベトナム語）：@uwulovecrosshand
+詳しい派生関係とライセンス・帰属情報は [NOTICE](./NOTICE) と [LICENSE](./LICENSE) を参照してください。
 
-## 必要な環境：
-- 64bitのWindows 10以上¹
-- GPU対応のOpenGL 3.3と最新のドライバ
+## 追加機能
 
-1：古いバージョンでも動くかもしれませんが、動作確認はされていません。
+MikuMikuWorld for UntitledCharts から継承した機能に加えて、MMW4UCbyMonchi 用の変更が含まれています。
 
-## ダウンロード：
-最新版は[ここ](https://github.com/UntitledCharts/MikuMikuWorld4UC/releases/latest)からダウンロードできます。
+## 翻訳
 
-## スクリーンショット：
+翻訳に協力したい場合は、[翻訳ガイド](./TRANSLATION.md) を参照してください。
 
-## TODO
+翻訳者の帰属情報は [NOTICE](./NOTICE) にまとめています。
+
+## 必要環境
+
+- 64bit の Windows 10 以降。
+- [Visual C++ Redistributable](https://aka.ms/vs/17/release/vc_redist.x64.exe)。
+- OpenGL 3.3 に対応したGPUと最新のドライバー。
+
+古いWindowsでも動作する可能性はありますが、動作確認対象外です。
+
+## ダウンロード
+
+最新版は [releases page](https://github.com/UntitledCharts/MikuMikuWorld4UC/releases/latest) からダウンロードできます。
+

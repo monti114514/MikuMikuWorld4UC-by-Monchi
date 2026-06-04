@@ -4,7 +4,6 @@
 # translation by ruii (@mi.honesta.reaccion)
 
 language_name, Español
-translator, ruii (@mi.honesta.reaccion)
 
 # menu bar / barra de menú
 file, Archivo
@@ -233,9 +232,7 @@ note_properties_hold_note, Propiedades de Hold
 note_properties_guide, Propiedades de Guide
 note_properties_not_selected, No hay notas o hi-speeds seleccionadas
 #- note_properties_many_hold_notes,
-#- translated_by,
 #- zoom_tooltip,
-#- translated_by,
 #- zoom_tooltip,
 
 # preset manager / editor de presets

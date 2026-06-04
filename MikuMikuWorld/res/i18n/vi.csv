@@ -2,7 +2,6 @@
 # key, value
 
 language_name, Tiếng Việt
-translator,N/A
 
 # menu bar
 file,Tệp
@@ -231,7 +230,6 @@ note_properties_hold_note,Thông tin Hold Notes
 note_properties_guide,Thông tin Guide
 note_properties_not_selected,Không có note hoặc hi-speed nào được chọn
 note_properties_many_hold_notes,Đang lựa chọn nhiều hơn một Hold note
-translated_by,Dịch bởi: %s
 zoom_tooltip,Ctrl+Chuột Trái để chỉnh sửa
 
 # preset manager

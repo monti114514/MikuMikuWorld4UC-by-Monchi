@@ -2,7 +2,6 @@
 # key, value
 
 language_name, Turkish
-translator, sctech-tr
 
 # menu bar
 file, Dosya
@@ -231,7 +230,6 @@ note_properties_hold_note, Basili Tutma Nota Özellikleri
 note_properties_guide, Kilavuz Özellikleri
 note_properties_not_selected, Hi-Speed'ler veya notalar seçilmedi
 note_properties_many_hold_notes, Birden fazla basili tutma notasi seçildi
-translated_by, Çeviren: %s
 zoom_tooltip, Ctrl-tiklayarak degeri düzenleyin
 
 # preset manager

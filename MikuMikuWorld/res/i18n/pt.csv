@@ -2,7 +2,6 @@
 # key, value
 
 language_name, Português do Brasil
-translator, nora (__noradrenaline)
 
 # menu bar / Barra de menu
 file, Arquivo
@@ -231,7 +230,6 @@ note_properties_hold_note, Propriedades de Hold
 note_properties_guide, Propriedades de guia
 note_properties_not_selected, Não há notas, guias ou hi-speeds selecionados
 note_properties_many_hold_notes, Mais de uma nota selecionada
-translated_by, Traduzido por: %s
 zoom_tooltip, Ferramenta de zoom
 
 # preset manager / Gerenciador de presets

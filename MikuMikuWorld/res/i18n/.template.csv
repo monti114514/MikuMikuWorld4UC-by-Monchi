@@ -2,7 +2,6 @@
 # key, value
 
 language_name,
-translator,
 
 # menu bar
 file,
@@ -231,7 +230,6 @@ note_properties_hold_note,
 note_properties_guide,
 note_properties_not_selected,
 note_properties_many_hold_notes,
-translated_by,
 zoom_tooltip,
 
 # preset manager

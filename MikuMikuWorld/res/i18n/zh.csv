@@ -6,7 +6,6 @@
 #I will make updates online during my free time.
 
 language_name,中文(简体)
-translator,观绯Guanfei(@_guanfei_)
 
 # menu bar
 file,文件
@@ -219,7 +218,6 @@ note_properties_hold_note,长按音符属性
 note_properties_guide,引导属性
 note_properties_not_selected,未选择属性
 note_properties_many_hold_notes,多个长按音符属性
-translated_by,翻译者: %s
 zoom_tooltip,缩放提示
 
 # preset manager

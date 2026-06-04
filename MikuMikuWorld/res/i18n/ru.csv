@@ -4,7 +4,6 @@
 # translation by Nobody (@_notfallen_)
 
 language_name, Русский
-translator, Nobody (@_notfallen_)
 
 # menu bar / бар меню
 file, Файл
@@ -233,7 +232,6 @@ note_properties_hold_note, Характеристики холд ноты
 note_properties_guide, Характеристики гайд ноты
 note_properties_not_selected, Никаких нот или Hi-Speed не было выбрано
 #- note_properties_many_hold_notes,
-translated_by, Перевод от: %s
 zoom_tooltip, Ctrl-клик чтобы изменить значение
 
 # preset manager / менеджер пресетов

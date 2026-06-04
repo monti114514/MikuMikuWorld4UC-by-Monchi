@@ -1018,17 +1018,13 @@ namespace MikuMikuWorld
 		if (ImGui::BeginPopupModal(MODAL_TITLE("about"), NULL, ImGuiWindowFlags_NoResize))
 		{
 			ImGui::Text(APP_NAME "\n"
-			                     "This application is based on MikuMikuWorld for Chart Cyanvas\n"
-			                     "Copyright (c) 2023 Nanashi. (@sevenc-nanashi)\n\n"
-			                     "Which was based on MikuMikuWorld.\n"
-			                     "Copyright (C) 2022 Crash5b\n\n");
+			                     "This application is based on MikuMikuWorld for UntitledCharts.\n\n"
+			                     "See LICENSE and NOTICE for license and attribution information.\n\n");
 			ImGui::Separator();
 
 			float okButtonHeight = ImGui::GetFrameHeight();
 
 			ImGui::Text("Version %s", Application::getAppVersion().c_str());
-
-			ImGui::Text(getString("translated_by"), getString("translator"));
 
 			ImGui::SetCursorPos(
 			    { ImGui::GetStyle().WindowPadding.x,

@@ -1,62 +1,30 @@
-**English** / [日本語](./README.ja.md)
+**English** / [Japanese](./README.ja.md)
 
-# MikuMikuWorld for UntitledCharts
+# MikuMikuWorld for UntitledCharts by Monchi
 
-[![](https://byob.yarr.is/UntitledCharts/MikuMikuWorld4UC/coverage-en)](./MikuMikuWorld/res/i18n/en.csv)
-[![](https://byob.yarr.is/UntitledCharts/MikuMikuWorld4UC/coverage-ja)](./MikuMikuWorld/res/i18n/ja.csv)
-[![](https://byob.yarr.is/UntitledCharts/MikuMikuWorld4UC/coverage-es)](./MikuMikuWorld/res/i18n/es.csv)
-[![](https://byob.yarr.is/UntitledCharts/MikuMikuWorld4UC/coverage-kr)](./MikuMikuWorld/res/i18n/kr.csv)
-[![](https://byob.yarr.is/UntitledCharts/MikuMikuWorld4UC/coverage-ru)](./MikuMikuWorld/res/i18n/ru.csv)
-[![](https://byob.yarr.is/UntitledCharts/MikuMikuWorld4UC/coverage-vi)](./MikuMikuWorld/res/i18n/vi.csv)
-[![](https://byob.yarr.is/UntitledCharts/MikuMikuWorld4UC/coverage-tr)](./MikuMikuWorld/res/i18n/tr.csv)
-[![](https://byob.yarr.is/UntitledCharts/MikuMikuWorld4UC/coverage-pt)](./MikuMikuWorld/res/i18n/pt.csv)
+MikuMikuWorld for UntitledCharts by Monchi, also referred to as MMW4UCbyMonchi, is a fork based directly on [MikuMikuWorld for UntitledCharts](https://github.com/UntitledCharts/MikuMikuWorld4UC).
 
-Fork of [MikuMikuWorld](https://github.com/crash5band/MikuMikuWorld) for [UntitledCharts](https://untitledcharts.com/).
+For the full attribution chain and license information, see [NOTICE](./NOTICE) and [LICENSE](./LICENSE).
 
 ## Added Features
 
-In addition to the original features of MikuMikuWorld, the following features are added:
-
-- Damage notes
-- Fake Notes
-- Extended lanes
-- Colored guides
-- New ease types
-- More flick direction (down, down left, down right)
-- Interpolate Hi-Speeds feature
-- Repeat Hold Mids feature
-- Note Properties panel
-- Support for decimal note lane and width
-- More hispeed options
-- Add import/export to LevelData
+In addition to the features inherited from MikuMikuWorld for UntitledCharts, this fork includes changes for the MMW4UCbyMonchi workflow.
 
 ## Translations
 
 If you want to contribute a translation, please see [the guide](./TRANSLATION.md).
 
-- 日本語 (Japanese) by @sevenc_nanashi
-- Español (Spanish) by @mi.honesta.reaccion
-- Русский (Russian) by @\_notfallen\_
-- Tiếng Việt (Vietnamese) by @uwulovecrosshand
-- 한글 (Korean) by @fjordic
-- Türkçe (Turkish) by @sctech-tr
-- Português do Brasil (Brazillian Portuguese) by @\_\_noradrenaline
+Translation attribution is maintained in [NOTICE](./NOTICE).
 
 ## Requirements
 
-- 64-bit Windows 10 or higher\*.
+- 64-bit Windows 10 or higher.
 - [Visual C++ Redistributable](https://aka.ms/vs/17/release/vc_redist.x64.exe).
 - GPU supporting OpenGL 3.3 with latest drivers installed.
 
-\*Earlier versions of Windows may work but not tested.
+Earlier versions of Windows may work but are not tested.
 
 ## Download
 
-The latest version can be downloaded [here](https://github.com/UntitledCharts/MikuMikuWorld4UC/releases/latest).
+The latest version can be downloaded from the [releases page](https://github.com/UntitledCharts/MikuMikuWorld4UC/releases/latest).
 
-## Screenshot
-
-## Todo
-- Adding alpha property to Guide (enabled by changing Fade Type to Custom)
-- Changing `HoldNote` class so you can insert more than ticks note into holds
-- Translation
