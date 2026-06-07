@@ -1544,12 +1544,12 @@ namespace MikuMikuWorld
 						ImGui::Separator();
 
 						UI::addCheckboxProperty(getString("draw_waveform"), config.drawWaveform);
+						UI::addCheckboxProperty(getString("return_to_last_tick"), config.returnToLastSelectedTickOnPause);
+						ImGui::Separator();
+
 						UI::addCheckboxProperty(getString("draw_hispeed_automation"), config.drawHiSpeedAutomation);
 						UI::addSliderProperty(getString("hispeed_graph_limit"), config.hiSpeedGraphLimit, 1.0f, 10.0f, "%.1fx");
 						UI::addPercentSliderProperty(getString("hispeed_graph_bg_opacity"), config.hiSpeedGraphBgOpacity);
-						UI::addCheckboxProperty(getString("return_to_last_tick"), config.returnToLastSelectedTickOnPause);
-						UI::addCheckboxProperty(getString("cursor_auto_scroll"), config.followCursorInPlayback);
-						UI::addPercentSliderProperty(getString("cursor_auto_scroll_amount"), config.cursorPositionThreshold);
 						UI::endPropertyColumns();
 					}
 
@@ -1557,6 +1557,10 @@ namespace MikuMikuWorld
 					                            ImGuiTreeNodeFlags_DefaultOpen))
 					{
 						UI::beginPropertyColumns();
+						UI::addCheckboxProperty(getString("cursor_auto_scroll"), config.followCursorInPlayback);
+						UI::addPercentSliderProperty(getString("cursor_auto_scroll_amount"), config.cursorPositionThreshold);
+						ImGui::Separator();
+
 						UI::addFloatProperty(getString("scroll_speed_normal"),
 						                     config.scrollSpeedNormal, "%.1fx");
 						UI::addFloatProperty(getString("scroll_speed_shift"),
