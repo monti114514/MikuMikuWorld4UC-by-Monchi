@@ -851,7 +851,7 @@ namespace MikuMikuWorld
 			std::filesystem::create_directory(wAutoSaveDir);
 
 		context.score.metadata = context.workingData.toScoreMetadata();
-		NativeScoreSerializer().serialize(context.score, autoSavePath + "\\mmw_auto_save_" +
+		NativeScoreSerializer().serialize(context.score, autoSavePath + "\\auto_save_" +
 		                                                     Utilities::getCurrentDateTime() +
 		                                                     UC_MMWS_EXTENSION);
 
@@ -882,7 +882,7 @@ namespace MikuMikuWorld
 		{
 			std::string extension = file.path().extension().string();
 			std::transform(extension.begin(), extension.end(), extension.begin(), ::tolower);
-			if (extension == MMWS_EXTENSION)
+			if (extension == UC_MMWS_EXTENSION)
 				deleteFiles.push_back(file);
 		}
 
@@ -904,7 +904,6 @@ namespace MikuMikuWorld
 		return deleteCount;
 	}
 
-// ＝＝＝ ここから追加：3D直線化アルゴリズム ＝＝＝
 	void ScoreEditor::straightenHold3D()
 	{
 		if (!context.hasSelection()) return;
@@ -914,7 +913,6 @@ namespace MikuMikuWorld
 		bool changed = false;
 		std::unordered_set<int> selected = context.selectedNotes;
 
-		// 【修正1】既存のノーツから最大のIDを探し出し、安全な新しいIDを用意する
 		int nextNoteID = 1;
 		for (const auto& pair : context.score.notes)
 		{
@@ -926,7 +924,6 @@ namespace MikuMikuWorld
 			if (context.score.notes.find(id) == context.score.notes.end()) continue;
 			Note& note = context.score.notes.at(id);
 
-			// Holdの始点ノーツかどうかを判定
 			if (note.getType() == NoteType::Hold && context.score.holdNotes.find(id) != context.score.holdNotes.end())
 			{
 				HoldNote& hold = context.score.holdNotes.at(id);
@@ -937,26 +934,21 @@ namespace MikuMikuWorld
 				int tickEnd = endNote.tick;
 				if (tickStart >= tickEnd) continue;
 
-				// 既存の中継点を削除
 				for (const auto& step : hold.steps)
 				{
 					context.score.notes.erase(step.ID);
 				}
 				hold.steps.clear();
 
-				// 時間（Scaled Duration）の取得
 				double stm0 = Engine::accumulateScaledDuration(tickStart, TICKS_PER_BEAT, context.score.tempoChanges, context.score.hiSpeedChanges, note.layer);
 				double stm1 = Engine::accumulateScaledDuration(tickEnd, TICKS_PER_BEAT, context.score.tempoChanges, context.score.hiSpeedChanges, endNote.layer);
 				
 				float noteDuration = Engine::getNoteDuration(config.pvNoteSpeed);
-				
-				// 終点のY座標進行度を計算（始点を Y=1.0 とした相対値）
+
 				double y1 = std::pow(1.06, 45.0 * (stm0 - stm1) / noteDuration);
-				
-				// ゼロ除算防止（すでにパースの影響を受けない垂直な線の場合はスキップ）
+
 				if (std::abs(1.0 / y1 - 1.0) < 1e-6) continue;
 
-				// 左端(Lane)と右端(Lane+Width)の逆算方程式の定数 A, B を求める
 				double laneStart = note.lane;
 				double laneEnd = endNote.lane;
 				double rightStart = note.lane + note.width;
@@ -968,11 +960,10 @@ namespace MikuMikuWorld
 				double BRight = (rightEnd - rightStart) / (1.0 / y1 - 1.0);
 				double ARight = rightStart - BRight;
 
-				// 【修正2】現在選択中のクオンタイズ（Division）から、打つ間隔（Tick）を自動計算する
 				int division = timeline.getDivision();
-				// 0除算防止の安全対策を入れた上で、MMWの標準計算式を適用
+
 				int resolution = (division > 0) ? (int)(TICKS_PER_BEAT / (division / 4.0f)) : 120;
-				if (resolution < 10) resolution = 10; // 細かすぎると重くなるため、念のための下限ストッパー
+				if (resolution < 10) resolution = 10;
 
 				for (int t = tickStart + resolution; t < tickEnd; t += resolution)
 				{
@@ -983,23 +974,20 @@ namespace MikuMikuWorld
 					float right_mid = (float)(ARight + BRight / y_mid);
 					float width_mid = right_mid - lane_mid;
 
-					// 新しい中継点(Note)を生成
 					Note stepNote(NoteType::HoldMid);
 					stepNote.tick = t;
 					stepNote.lane = lane_mid;
-					stepNote.width = std::max(0.1f, width_mid); // 幅がマイナスになるのを防ぐ
+					stepNote.width = std::max(0.1f, width_mid);
 					stepNote.parentID = hold.start.ID;
 					stepNote.layer = note.layer;
-					
-					// 【修正1】安全に計算した新しいIDを付与する
+
 					stepNote.ID = nextNoteID++;
 					
 					context.score.notes[stepNote.ID] = stepNote;
 
-					// HoldStepとして紐付け
 					HoldStep step;
 					step.ID = stepNote.ID;
-					step.type = HoldStepType::Hidden; // 透明な中継点
+					step.type = HoldStepType::Hidden;
 					step.ease = EaseType::Linear;
 					hold.steps.push_back(step);
 				}
