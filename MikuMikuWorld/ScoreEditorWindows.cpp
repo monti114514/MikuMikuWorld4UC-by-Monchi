@@ -983,7 +983,7 @@ namespace MikuMikuWorld
 
 			if (ImGui::Button(getString("yes"), btnSz))
 			{
-				system("start https://github.com/UntitledCharts/MikuMikuWorld4UC/releases");
+				system("start https://github.com/monti114514/MikuMikuWorld4UC-by-Monchi/releases");
 				ImGui::CloseCurrentPopup();
 				ImGui::EndPopup();
 				return DialogResult::Ok;
@@ -2357,8 +2357,8 @@ namespace MikuMikuWorld
 				ImGuiTableFlags tableFlags = ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_Resizable;
 				if (ImGui::BeginTable("waypoints_table", 2, tableFlags))
 				{
-					ImGui::TableSetupColumn(getString("name"), ImGuiTableColumnFlags_WidthStretch); // 日本語化
-					ImGui::TableSetupColumn(getString("time"), ImGuiTableColumnFlags_WidthFixed, 140.0f); // 日本語化
+					ImGui::TableSetupColumn(getString("name"), ImGuiTableColumnFlags_WidthStretch);
+					ImGui::TableSetupColumn(getString("time"), ImGuiTableColumnFlags_WidthFixed, 140.0f);
 					
 					for (int i = 0; i < context.score.waypoints.size(); ++i)
 					{
@@ -2430,7 +2430,7 @@ namespace MikuMikuWorld
 						int measure = accumulateMeasures(waypoint.tick, TICKS_PER_BEAT, context.score.timeSignatures) + 1;
 						float time = accumulateDuration(waypoint.tick, TICKS_PER_BEAT, context.score.tempoChanges);
 						char timeStr[64];
-						// 小節の表示も日本語化
+
 						snprintf(timeStr, sizeof(timeStr), "%s %d (%02d:%02d)", getString("measure"), measure, (int)time / 60, (int)std::fmod(time, 60.0f));
 
 						ImGui::SetCursorScreenPos(ImVec2(ImGui::GetCursorScreenPos().x + ImGui::GetStyle().ItemSpacing.x, startPos.y));

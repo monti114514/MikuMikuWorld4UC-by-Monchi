@@ -310,6 +310,7 @@
     <ClInclude Include="UscSerializer.h" />
     <ClInclude Include="Utilities.h" />
     <ClInclude Include="Audio\Waveform.h" />
+    <ClInclude Include="Version.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="mmw_icon.ico" />

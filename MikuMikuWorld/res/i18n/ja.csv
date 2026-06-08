@@ -42,8 +42,8 @@ ask_save, 譜面を保存しますか？
 warn_unsaved, 保存されていない変更は失われます。
 save_changes, 保存する
 discard_changes, 保存しない
-update_available, 新しいバージョンがリリースされました！
-update_available_description, %s がリリースされました。ブラウザで開きますか？
+update_available, アップデートがあります
+update_available_description, バージョン %s がリリースされています。リリースページを開きますか？
 score_file, 譜面ファイル
 export_successful, エクスポートが完了しました。
 unknown_file_format, 例外な拡張子です。
