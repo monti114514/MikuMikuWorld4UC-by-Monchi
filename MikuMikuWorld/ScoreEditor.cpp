@@ -16,7 +16,7 @@
 #include "PreviewEngine.h"
 #include <iomanip>
 #include <Windows.h>
-#include <shobjidl.h> // フォルダ選択ダイアログを使用するために追加
+#include <shobjidl.h>
 #include <filesystem>
 #include <fstream>
 
@@ -384,15 +384,31 @@ namespace MikuMikuWorld
 
 	size_t ScoreEditor::updateRecentFilesList(const std::string& entry)
 	{
-		while (config.recentFiles.size() >= maxRecentFilesEntries)
-			config.recentFiles.pop_back();
+		std::string normalizedEntry = entry;
+		std::replace(normalizedEntry.begin(), normalizedEntry.end(), '\\', '/');
+		std::transform(normalizedEntry.begin(), normalizedEntry.end(), normalizedEntry.begin(),
+		               [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
 
-		// Remove the entry (if found) to the beginning of the vector
+		const size_t filenamePos = normalizedEntry.find_last_of('/');
+		const std::string filename =
+		    filenamePos == std::string::npos ? normalizedEntry : normalizedEntry.substr(filenamePos + 1);
+
+		if (normalizedEntry.find("/auto_save/") != std::string::npos ||
+		    filename.rfind("auto_save_", 0) == 0)
+		{
+			return config.recentFiles.size();
+		}
+
+		// Remove the entry if it already exists.
 		auto it = std::find(config.recentFiles.begin(), config.recentFiles.end(), entry);
 		if (it != config.recentFiles.end())
 			config.recentFiles.erase(it);
 
 		config.recentFiles.insert(config.recentFiles.begin(), entry);
+
+		while (config.recentFiles.size() > maxRecentFilesEntries)
+			config.recentFiles.pop_back();
+
 		return config.recentFiles.size();
 	}
 
@@ -839,7 +855,7 @@ namespace MikuMikuWorld
 
 	void ScoreEditor::help()
 	{
-		ShellExecuteW(0, 0, L"https://github.com/crash5band/MikuMikuWorld/wiki", 0, 0, SW_SHOW);
+		ShellExecuteW(0, 0, L"https://sekai-guide.tootiejin.com/getting-started/usage-guide-mmw4cc", 0, 0, SW_SHOW);
 	}
 
 	void ScoreEditor::autoSave()
