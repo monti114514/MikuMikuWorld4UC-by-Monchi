@@ -5,6 +5,7 @@
 #include "Application.h"
 #include "ApplicationConfiguration.h"
 #include "Colors.h"
+#include <algorithm>
 
 #ifdef _DEBUG
 #define PRINT_DEBUG(...)                                                                           \
@@ -205,8 +206,10 @@ namespace MikuMikuWorld
 		};
 		levelData.bgmOffset = toBgmOffset(score.metadata.musicOffset);
 		levelData.entities.reserve(score.hiSpeedChanges.size() + score.layers.size() +
-		                           score.notes.size() * 2 + score.tempoChanges.size());
-		levelData.entities.emplace_back("Initialization");
+		                           score.notes.size() * 2 + score.tempoChanges.size() +
+		                           score.skills.size() + 3);
+		auto& initEntity = levelData.entities.emplace_back("Initialization");
+		initEntity.data["initialLife"] = score.metadata.baseLifePoint;
 
 		for (const auto& tempo : score.tempoChanges)
 			levelData.entities.emplace_back(toBpmChangeEntity(tempo));
@@ -239,6 +242,16 @@ namespace MikuMikuWorld
 			lastSpeedIndex = newSpeedIdx;
 		}
 
+		for (const auto& [_, skill] : score.skills)
+			levelData.entities.emplace_back(toSkillEntity(skill));
+
+		if (score.fever.startTick >= 0 && score.fever.endTick >= score.fever.startTick)
+		{
+			auto [feverChance, feverStart] = toFeverEntities(score.fever);
+			levelData.entities.emplace_back(std::move(feverChance));
+			levelData.entities.emplace_back(std::move(feverStart));
+		}
+
 		std::multimap<TickType, size_t> simBuilder;
 		for (const auto& [id, note] : score.notes)
 		{
@@ -268,7 +281,8 @@ namespace MikuMikuWorld
 			levelData.entities.emplace_back(toNoteEntity(startNote,
 			                                             getHoldNoteArchetype(startNote, hold),
 			                                             getEnityName(groupEntIdx[startNote.layer]),
-			                                             &hold, hold.start.type, hold.start.ease));
+			                                             &hold, hold.start.type, hold.start.ease,
+			                                             hold.start.layer));
 
 			for (size_t stepIdx = 0; stepIdx <= hold.steps.size(); ++stepIdx)
 			{
@@ -280,7 +294,7 @@ namespace MikuMikuWorld
 				levelData.entities
 				    .emplace_back(toNoteEntity(tickNote, getHoldNoteArchetype(tickNote, hold),
 				                               getEnityName(groupEntIdx[tickNote.layer]), &hold,
-				                               step.type, step.ease))
+				                               step.type, step.ease, step.layer))
 				    .name = std::move(entName);
 				if (step.type != HoldStepType::Skip)
 					entityJoints.push_back(lastEntityIndex);
@@ -356,12 +370,18 @@ namespace MikuMikuWorld
 		size_t errorCount = 0, unsupportedCount = 0;
 		Score score;
 		score.metadata.musicOffset = fromBgmOffset(levelData.bgmOffset);
+		const auto isInitEntity = [](const Sonolus::LevelDataEntity& e)
+		{ return e.archetype == "Initialization"; };
 		const auto isBpmChangeEntity = [](const LevelDataEntity& e)
 		{ return e.archetype == "#BPM_CHANGE"; };
 		const auto isTimescaleGroupEntity = [](const LevelDataEntity& e)
 		{ return e.archetype == "#TIMESCALE_GROUP"; };
 		const auto isNoteEntity = [](const Sonolus::LevelDataEntity& e)
 		{ return IO::endsWith(e.archetype, "Note") && e.archetype != "TransientHiddenTickNote"; };
+		const auto isSkillEntity = [](const Sonolus::LevelDataEntity& e)
+		{ return e.archetype == "Skill"; };
+		const auto isFeverEntity = [](const Sonolus::LevelDataEntity& e)
+		{ return e.archetype == "FeverChance" || e.archetype == "FeverStart"; };
 
 		std::unordered_map<RefType, size_t> entityNameMap;
 		entityNameMap.reserve(std::max<size_t>(levelData.entities.size() / 2, 32));
@@ -461,6 +481,27 @@ namespace MikuMikuWorld
 		}
 		if (score.layers.empty())
 			score.layers.emplace_back(Layer{ "default" });
+
+		for (const auto& entity : levelData.entities)
+		{
+			if (isInitEntity(entity))
+			{
+				entity.tryGetDataValue("initialLife", score.metadata.baseLifePoint);
+			}
+			else if (isSkillEntity(entity))
+			{
+				SkillTrigger skill{};
+				if (fromSkillEntity(entity, skill))
+					score.skills.emplace(skill.ID, skill);
+				else
+					errorCount++;
+			}
+			else if (isFeverEntity(entity))
+			{
+				if (!fromFeverEntity(entity, score.fever))
+					errorCount++;
+			}
+		}
 
 		for (const auto& entIdx : noteEntities)
 		{
@@ -580,7 +621,9 @@ namespace MikuMikuWorld
 	LevelDataEntity PySekaiEngine::toGroupEntity(const Layer& layer)
 	{
 		return { "#TIMESCALE_GROUP",
-			     { { "editorName", layer.name }, { "editorHidden", layer.hidden ? 1 : 0 } } };
+			     { { "editorName", layer.name },
+			       { "editorHidden", layer.hidden ? 1 : 0 },
+			       { "forceNoteSpeed", layer.forceNoteSpeed } } };
 	}
 
 	LevelDataEntity PySekaiEngine::toTimeScaleEntity(const HiSpeedChange& hispeed,
@@ -595,9 +638,25 @@ namespace MikuMikuWorld
 			       { "hideNotes", static_cast<int>(hispeed.hideNotes) } } };
 	}
 
+	LevelDataEntity PySekaiEngine::toSkillEntity(const SkillTrigger& skill)
+	{
+		return { "Skill",
+			     { { "#BEAT", ticksToBeats(skill.tick) },
+			       { "effect", static_cast<IntegerType>(skill.effect) },
+			       { "level", static_cast<IntegerType>(skill.level) } } };
+	}
+
+	std::pair<Sonolus::LevelDataEntity, Sonolus::LevelDataEntity>
+	PySekaiEngine::toFeverEntities(const Fever& fever)
+	{
+		return { { "FeverChance", { { "#BEAT", ticksToBeats(fever.startTick) } } },
+			     { "FeverStart", { { "#BEAT", ticksToBeats(fever.endTick) } } } };
+	}
+
 	LevelDataEntity PySekaiEngine::toNoteEntity(const Note& note, const std::string& archetype,
 	                                            const RefType& groupName, const HoldNote* hold,
-	                                            HoldStepType step, EaseType easing)
+	                                            HoldStepType step, EaseType easing,
+	                                            HoldStepLayer layer)
 	{
 		float alpha = 1.f;
 		if (hold)
@@ -627,8 +686,8 @@ namespace MikuMikuWorld
 			       { "connectorEase", toEaseNumeric(easing) },
 			       { "segmentKind", toKindNumeric(note.critical, hold) },
 			       { "segmentAlpha", alpha },
-			       { "segmentLayer", 0 },
-			       { "effectKind", 0 } } };
+			       { "segmentLayer", toLayerNumeric(layer) },
+			       { "effectKind", toEffectNumeric(note.soundEffect) } } };
 	}
 
 	LevelDataEntity PySekaiEngine::toConnector(const HoldNote& hold, const RefType& head,
@@ -824,6 +883,52 @@ namespace MikuMikuWorld
 		}
 	}
 
+	int PySekaiEngine::toEffectNumeric(SoundEffectType effect)
+	{
+		switch (effect)
+		{
+		case SoundEffectType::None:
+			return 1;
+		case SoundEffectType::TapPerfect:
+			return 2;
+		case SoundEffectType::Flick:
+			return 3;
+		case SoundEffectType::Trace:
+			return 4;
+		case SoundEffectType::Tick:
+			return 5;
+		case SoundEffectType::CritTap:
+			return 6;
+		case SoundEffectType::CritFlick:
+			return 7;
+		case SoundEffectType::CritTrace:
+			return 8;
+		case SoundEffectType::CritTick:
+			return 9;
+		case SoundEffectType::Damage:
+			return 10;
+		default:
+			PRINT_DEBUG("Unknown SoundEffectType");
+			[[fallthrough]];
+		case SoundEffectType::Default:
+			return 0;
+		}
+	}
+
+	int PySekaiEngine::toLayerNumeric(HoldStepLayer layer)
+	{
+		switch (layer)
+		{
+		case HoldStepLayer::Top:
+			return 0;
+		case HoldStepLayer::Bottom:
+			return 1;
+		default:
+			PRINT_DEBUG("Unknown HoldStepLayer");
+			return 0;
+		}
+	}
+
 	int PySekaiEngine::toKindNumeric(bool critical, const HoldNote* hold)
 	{
 		bool isGuideHold = hold && hold->isGuide();
@@ -866,6 +971,9 @@ namespace MikuMikuWorld
 	{
 		groupEntity.tryGetDataValue("editorName", layer.name);
 		groupEntity.tryGetDataValue("editorHidden", layer.hidden);
+		groupEntity.tryGetDataValue("forceNoteSpeed", layer.forceNoteSpeed);
+		if (layer.forceNoteSpeed < 1.0f || layer.forceNoteSpeed > 12.0f)
+			layer.forceNoteSpeed = 0.0f;
 		return true;
 	}
 
@@ -919,6 +1027,43 @@ namespace MikuMikuWorld
 		return true;
 	}
 
+	bool PySekaiEngine::fromSkillEntity(const LevelDataEntity& skillEntity, SkillTrigger& skill)
+	{
+		RealType beat;
+		IntegerType effect = 0, level = 1;
+		if (!skillEntity.tryGetDataValue("#BEAT", beat))
+		{
+			PRINT_DEBUG("Missing '#BEAT' key on %s (%s)", skillEntity.archetype.c_str(),
+			            skillEntity.name.c_str());
+			return false;
+		}
+		skillEntity.tryGetDataValue("effect", effect);
+		skillEntity.tryGetDataValue("level", level);
+		skill.ID = getNextSkillID();
+		skill.tick = beatsToTicks(beat);
+		skill.effect = static_cast<SkillEffect>(effect);
+		if (skill.effect >= SkillEffect::EffectCount)
+			skill.effect = SkillEffect::Score;
+		skill.level = static_cast<uint8_t>(std::clamp<IntegerType>(level, 1, 4));
+		return true;
+	}
+
+	bool PySekaiEngine::fromFeverEntity(const LevelDataEntity& feverEntity, Fever& fever)
+	{
+		RealType beat;
+		if (!feverEntity.tryGetDataValue("#BEAT", beat))
+		{
+			PRINT_DEBUG("Missing '#BEAT' key on %s (%s)", feverEntity.archetype.c_str(),
+			            feverEntity.name.c_str());
+			return false;
+		}
+		if (feverEntity.archetype == "FeverChance")
+			fever.startTick = beatsToTicks(beat);
+		else
+			fever.endTick = beatsToTicks(beat);
+		return true;
+	}
+
 	int PySekaiEngine::fromNoteEntity(const LevelDataEntity& noteEntity, Note& note,
 	                                  const std::unordered_map<RefType, size_t>& groupNameMap)
 	{
@@ -959,13 +1104,20 @@ namespace MikuMikuWorld
 		}
 		int effect = 0;
 		noteEntity.tryGetDataValue("effectKind", effect);
+		note.soundEffect = fromEffectNumeric(effect);
+		if (note.soundEffect == SoundEffectType::SoundEffectTypeCount)
+		{
+			PRINT_DEBUG("Unknown effect value %d!", effect);
+			note.soundEffect = SoundEffectType::Default;
+			return UNSUPPORTED_ENUM;
+		}
 		if (!isValidNoteState(note))
 		{
 			PRINT_DEBUG("Invalid note state (t:%d, w:%f, l:%f) on %s (%s)", note.tick, note.width,
 			            note.lane, noteEntity.archetype.c_str(), noteEntity.name.c_str());
 			return false;
 		}
-		return effect != 0 ? UNSUPPORTED_ENUM : true;
+		return true;
 	}
 
 	int PySekaiEngine::fromTapNoteEntity(const LevelDataEntity& tapNoteEntity, Note& note,
@@ -1053,6 +1205,16 @@ namespace MikuMikuWorld
 		{
 			PRINT_DEBUG("Hold note doesn't have a valid segmentKind!");
 			return false;
+		}
+
+		int segmentLayer = 0;
+		noteEntity.tryGetDataValue("segmentLayer", segmentLayer);
+		hold.start.layer = fromLayerNumeric(segmentLayer);
+		if (hold.start.layer == HoldStepLayer::LayerCount)
+		{
+			PRINT_DEBUG("Unknown segmentLayer %d", segmentLayer);
+			hold.start.layer = HoldStepLayer::Top;
+			status = UNSUPPORTED_ENUM;
 		}
 
 		// Handle separate holds
@@ -1180,6 +1342,16 @@ namespace MikuMikuWorld
 		if (!(status = fromNoteEntity(noteEntity, note, groupNameMap)))
 			return false;
 
+		int segmentLayer = 0;
+		noteEntity.tryGetDataValue("segmentLayer", segmentLayer);
+		step.layer = fromLayerNumeric(segmentLayer);
+		if (step.layer == HoldStepLayer::LayerCount)
+		{
+			PRINT_DEBUG("Unknown segmentLayer %d", segmentLayer);
+			step.layer = HoldStepLayer::Top;
+			status = UNSUPPORTED_ENUM;
+		}
+
 		int attached = 0;
 		if (noteEntity.tryGetDataValue("isAttached", attached) && attached)
 			step.type = HoldStepType::Skip;
@@ -1237,6 +1409,16 @@ namespace MikuMikuWorld
 		int status;
 		if (!(status = fromNoteEntity(noteEntity, note, groupNameMap)))
 			return false;
+
+		int segmentLayer = 0;
+		noteEntity.tryGetDataValue("segmentLayer", segmentLayer);
+		step.layer = fromLayerNumeric(segmentLayer);
+		if (step.layer == HoldStepLayer::LayerCount)
+		{
+			PRINT_DEBUG("Unknown segmentLayer %d", segmentLayer);
+			step.layer = HoldStepLayer::Top;
+			status = UNSUPPORTED_ENUM;
+		}
 
 		// Handle separate holds
 		// hold -> guide: force release
@@ -1408,6 +1590,50 @@ namespace MikuMikuWorld
 			return EaseType::EaseOutIn;
 		default:
 			return EaseType::EaseTypeCount;
+		}
+	}
+
+	SoundEffectType PySekaiEngine::fromEffectNumeric(int effectKind)
+	{
+		switch (effectKind)
+		{
+		case 0:
+			return SoundEffectType::Default;
+		case 1:
+			return SoundEffectType::None;
+		case 2:
+			return SoundEffectType::TapPerfect;
+		case 3:
+			return SoundEffectType::Flick;
+		case 4:
+			return SoundEffectType::Trace;
+		case 5:
+			return SoundEffectType::Tick;
+		case 6:
+			return SoundEffectType::CritTap;
+		case 7:
+			return SoundEffectType::CritFlick;
+		case 8:
+			return SoundEffectType::CritTrace;
+		case 9:
+			return SoundEffectType::CritTick;
+		case 10:
+			return SoundEffectType::Damage;
+		default:
+			return SoundEffectType::SoundEffectTypeCount;
+		}
+	}
+
+	HoldStepLayer PySekaiEngine::fromLayerNumeric(int segmentLayer)
+	{
+		switch (segmentLayer)
+		{
+		case 0:
+			return HoldStepLayer::Top;
+		case 1:
+			return HoldStepLayer::Bottom;
+		default:
+			return HoldStepLayer::LayerCount;
 		}
 	}
 

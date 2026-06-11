@@ -72,6 +72,7 @@ namespace MikuMikuWorld
 		bool friction{ false };
 		bool dummy{ false };
 		FlickType flick{ FlickType::None };
+		SoundEffectType soundEffect{ SoundEffectType::Default };
 
 		int layer{ 0 };
 
@@ -96,6 +97,7 @@ namespace MikuMikuWorld
 		id_t ID;
 		HoldStepType type;
 		EaseType ease;
+		HoldStepLayer layer{ HoldStepLayer::Top };
 
 		inline bool canEase() const
 		{

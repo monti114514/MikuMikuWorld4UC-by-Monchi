@@ -28,6 +28,22 @@ namespace MikuMikuWorld
 		"none", "default", "left", "right", "down", "down_left", "down_right"
 	};
 
+	enum class SoundEffectType : uint8_t
+	{
+		Default,
+		None,
+		TapPerfect,
+		Flick,
+		Trace,
+		Tick,
+		CritTap,
+		CritFlick,
+		CritTrace,
+		CritTick,
+		Damage,
+		SoundEffectTypeCount
+	};
+
 	enum class HoldStepType : uint8_t
 	{
 		Normal,
@@ -70,6 +86,13 @@ namespace MikuMikuWorld
 	};
 
 	constexpr const char* holdEndTypes[]{ "normal", "trace", "hidden" };
+
+	enum class HoldStepLayer : uint8_t
+	{
+		Top,
+		Bottom,
+		LayerCount
+	};
 
 	enum class GuideColor : uint8_t
 	{
