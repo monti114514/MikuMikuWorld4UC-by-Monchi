@@ -4,6 +4,7 @@
 #include "ScoreContext.h"
 #include "ApplicationConfiguration.h"
 #include <algorithm>
+#include <cmath>
 #include <functional>
 #include <tuple>
 
@@ -33,6 +34,24 @@ namespace MikuMikuWorld::Effect
 		if (flip)
 			lane = MAX_LANE - lane - width + 1;
 		return (lane - 6 + width / 2.f) * EFFECT_WIDTH_RATIO;
+	}
+
+	static std::pair<int, int> getLaneEffectRange(const Note& note, size_t laneCount)
+	{
+		if (laneCount == 0 || !std::isfinite(note.lane) || !std::isfinite(note.width) ||
+		    note.width <= 0.f)
+			return { 0, 0 };
+
+		const double start = std::floor(static_cast<double>(note.lane));
+		const double end = std::ceil(static_cast<double>(note.lane) + static_cast<double>(note.width));
+		const double laneCountValue = static_cast<double>(laneCount);
+		if (!std::isfinite(start) || !std::isfinite(end) || end <= start)
+			return { 0, 0 };
+
+		return {
+			static_cast<int>(std::clamp(start, 0.0, laneCountValue)),
+			static_cast<int>(std::clamp(end, 0.0, laneCountValue))
+		};
 	}
 
 	static float getEffectNoteCenter(const Note& note, bool flip)
@@ -407,7 +426,11 @@ namespace MikuMikuWorld::Effect
 	void EffectView::addLaneEffect(EffectType effect, const Note& note, const ScoreContext& context, float time)
 	{
 		EffectPool& pool = effectPools[effect];
-		for (int i = note.lane; i < note.lane + note.width; i++)
+		const auto [laneStart, laneEnd] = getLaneEffectRange(note, pool.pool.size());
+		if (laneStart == laneEnd)
+			return;
+
+		for (int i = laneStart; i < laneEnd; i++)
 		{
 			ParticleController& controller = pool.pool[i];
 			controller.worldOffset.position = DirectX::XMVectorSetX(controller.worldOffset.position, getEffectXPos(i, 1, config.pvMirrorScore));
