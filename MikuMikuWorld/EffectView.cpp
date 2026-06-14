@@ -70,6 +70,31 @@ namespace MikuMikuWorld::Effect
 		return std::make_pair(left, right);
 	}
 
+	static const HiSpeedChange* findActiveLayerHiSpeed(const Score& score, int layer, int tick)
+	{
+		const HiSpeedChange* active = nullptr;
+		for (const auto& [id, hiSpeed] : score.hiSpeedChanges)
+		{
+			if (hiSpeed.layer != layer || hiSpeed.tick > tick)
+				continue;
+
+			if (!active || hiSpeed.tick > active->tick ||
+			    (hiSpeed.tick == active->tick && hiSpeed.ID > active->ID))
+				active = &hiSpeed;
+		}
+
+		return active;
+	}
+
+	static bool isHideNotesActive(const Score& score, int layer, int tick)
+	{
+		if (layer < 0 || layer >= static_cast<int>(score.layers.size()))
+			return false;
+
+		const HiSpeedChange* active = findActiveLayerHiSpeed(score, layer, tick);
+		return active && active->hideNotes;
+	}
+
 	static std::pair<float, float> getHoldSegmentBound(const Note& note, const Score& score, int curTick)
 	{
 		const HoldNote& holdNotes = score.holdNotes.at(note.ID);
@@ -132,6 +157,7 @@ namespace MikuMikuWorld::Effect
 	void ParticleController::play(const Note& note, float start, float end)
 	{
 		active = true;
+		visible = true;
 		time.min = start;
 		time.max = end;
 		refID = note.ID;
@@ -143,6 +169,7 @@ namespace MikuMikuWorld::Effect
 	void ParticleController::stop()
 	{
 		active = false;
+		visible = true;
 		time = { -1, -1 };
 		effectRoot.stop(true);
 	}
@@ -200,6 +227,10 @@ namespace MikuMikuWorld::Effect
 			float noteTime = accumulateDuration(note.tick, TICKS_PER_BEAT, context.score.tempoChanges);
 			if (isMidHold || isWithinRange(currentTime, noteTime - 0.02f, noteTime + 0.04f))
 			{
+				const int hideNotesTick = isMidHold ? static_cast<int>(currentTick) : note.tick;
+				if (isHideNotesActive(context.score, note.layer, hideNotesTick))
+					continue;
+
 				addNoteEffects(note, context, noteTime);
 				playedEffectsNoteIds.insert(id);
 			}
@@ -459,8 +490,15 @@ namespace MikuMikuWorld::Effect
 				if (!controller.active)
 					continue;
 
+				const Note& refNote = context.score.notes.at(controller.refID);
+				controller.visible =
+				    !isHideNotesActive(context.score, refNote.layer, context.currentTick);
+				if (!controller.visible)
+					continue;
+
 				float noteLeft{}, noteRight{};
-				std::tie(noteLeft, noteRight) = getHoldSegmentBound(context.score.notes.at(controller.refID), context.score, context.currentTick);
+				std::tie(noteLeft, noteRight) =
+				    getHoldSegmentBound(refNote, context.score, context.currentTick);
 
 				if (static_cast<EffectType>(i) == fx_note_hold_aura ||
 					static_cast<EffectType>(i) == fx_note_critical_long_hold_gen_aura)
@@ -493,7 +531,7 @@ namespace MikuMikuWorld::Effect
 		{
 			for (auto& controller : effectPools[effect].pool)
 			{
-				if (controller.active)
+				if (controller.active && controller.visible)
 					drawUnderNoteEffectsInternal(controller.effectRoot, renderer, time);
 			}
 		}
@@ -506,7 +544,7 @@ namespace MikuMikuWorld::Effect
 		{
 			for (auto& controller : effectPools[static_cast<EffectType>(i)].pool)
 			{
-				if (controller.active)
+				if (controller.active && controller.visible)
 					drawingControllers.push_back(&controller);
 			}
 		}

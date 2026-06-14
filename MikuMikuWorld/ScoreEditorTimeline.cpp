@@ -10,9 +10,52 @@
 #include "Utilities.h"
 #include <algorithm>
 #include <string>
+#include <vector>
 
 namespace MikuMikuWorld
 {
+	namespace
+	{
+		const HiSpeedChange* findActiveLayerHiSpeed(const Score& score, int layer, int tick)
+		{
+			const HiSpeedChange* active = nullptr;
+			for (const auto& [id, hiSpeed] : score.hiSpeedChanges)
+			{
+				if (hiSpeed.layer != layer || hiSpeed.tick > tick)
+					continue;
+
+				if (!active || hiSpeed.tick > active->tick ||
+				    (hiSpeed.tick == active->tick && hiSpeed.ID > active->ID))
+					active = &hiSpeed;
+			}
+
+			return active;
+		}
+
+		bool isHideNotesActive(const Score& score, int layer, int tick)
+		{
+			if (layer < 0 || layer >= static_cast<int>(score.layers.size()))
+				return false;
+
+			const HiSpeedChange* active = findActiveLayerHiSpeed(score, layer, tick);
+			return active && active->hideNotes;
+		}
+
+		std::vector<int> getHiSpeedBoundaryTicks(const Score& score, int layer, int startTick, int endTick)
+		{
+			std::vector<int> boundaries{ startTick, endTick };
+			for (const auto& [id, hiSpeed] : score.hiSpeedChanges)
+			{
+				if (hiSpeed.layer == layer && hiSpeed.tick > startTick && hiSpeed.tick < endTick)
+					boundaries.push_back(hiSpeed.tick);
+			}
+
+			std::sort(boundaries.begin(), boundaries.end());
+			boundaries.erase(std::unique(boundaries.begin(), boundaries.end()), boundaries.end());
+			return boundaries;
+		}
+	}
+
 	ScoreEditorTimeline* timelineInstance = nullptr;
 
 	void scrollTimeline(ScoreContext& context, const int tick)
@@ -3145,7 +3188,7 @@ namespace MikuMikuWorld
 		if (!playing)
 			return;
 
-		static auto singleNoteSEFunc = [&context, this](const Note& note, float notePlayTime)
+		auto singleNoteSEFunc = [&context, this](const Note& note, float notePlayTime)
 		{
 			bool playSE = true;
 			if (note.getType() == NoteType::Hold)
@@ -3167,6 +3210,10 @@ namespace MikuMikuWorld
 			{
 				playSE = false;
 			}
+			if (isHideNotesActive(context.score, note.layer, note.tick))
+			{
+				playSE = false;
+			}
 
 			if (playSE)
 			{
@@ -3180,17 +3227,37 @@ namespace MikuMikuWorld
 			}
 		};
 
-		static auto holdNoteSEFunc = [&context, this](const Note& note, float startTime)
+		auto holdNoteSEFunc = [&context, this](const Note& note, float startTime)
 		{
 			HoldNote& hold = context.score.holdNotes.at(note.ID);
 			if (hold.dummy)
 				return;
 			int endTick = context.score.notes.at(hold.end).tick;
-			float endTime = accumulateDuration(endTick, TICKS_PER_BEAT, context.score.tempoChanges);
+			if (endTick <= note.tick)
+				return;
 
-			float adjustedEndTime = endTime - playStartTime + audioOffsetCorrection;
-			context.audio.playSoundEffect(note.critical ? SE_CRITICAL_CONNECT : SE_CONNECT,
-			                              startTime, adjustedEndTime, time);
+			const std::string_view se = note.critical ? SE_CRITICAL_CONNECT : SE_CONNECT;
+			const std::vector<int> boundaries =
+			    getHiSpeedBoundaryTicks(context.score, note.layer, note.tick, endTick);
+			for (size_t i = 0; i + 1 < boundaries.size(); ++i)
+			{
+				const int segmentStartTick = boundaries[i];
+				const int segmentEndTick = boundaries[i + 1];
+				if (isHideNotesActive(context.score, note.layer, segmentStartTick))
+					continue;
+
+				const float segmentStartTime =
+				    accumulateDuration(segmentStartTick, TICKS_PER_BEAT, context.score.tempoChanges);
+				const float segmentEndTime =
+				    accumulateDuration(segmentEndTick, TICKS_PER_BEAT, context.score.tempoChanges);
+				const float adjustedStartTime =
+				    std::max(startTime, segmentStartTime - playStartTime - audioOffsetCorrection);
+				const float adjustedEndTime = segmentEndTime - playStartTime + audioOffsetCorrection;
+				if (adjustedEndTime <= adjustedStartTime)
+					continue;
+
+				context.audio.playSoundEffect(se.data(), adjustedStartTime, adjustedEndTime, time);
+			}
 		};
 
 		playingNoteSounds.clear();

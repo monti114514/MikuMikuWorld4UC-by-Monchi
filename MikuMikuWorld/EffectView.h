@@ -99,6 +99,7 @@ namespace MikuMikuWorld::Effect
 		Effect::Transform worldOffset{};
 		Effect::EmitterInstance effectRoot{};
 		bool active{ false };
+		bool visible{ true };
 
 		void play(const Note& note, float start, float end);
 		void stop();
