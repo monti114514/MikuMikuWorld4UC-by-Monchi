@@ -41,6 +41,8 @@ namespace MikuMikuWorld
 
 			UI::addIntProperty(getString("lane_extension"), context.workingData.laneExtension, 0,
 			                   100);
+			UI::addIntProperty(getString("life_point"), context.workingData.baseLifePoint, 10,
+			                   999999);
 			UI::endPropertyColumns();
 		}
 
@@ -158,17 +160,15 @@ namespace MikuMikuWorld
 			
 			UI::propertyLabel(getString("beat"));
 			ImGui::SetNextItemWidth(-1);
-			
-			// MMWでは4分音符=1拍(Beat)として扱うため、4.0 / Division で1ステップの拍数を計算
+
 			double step = 4.0 / (currentDivision > 0 ? currentDivision : 4);
-			double step_fast = step * 4.0; // Shiftキーを押しながらの高速移動用
+			double step_fast = step * 4.0;
 			
 			bool beatChanged = ImGui::InputDouble(IO::concat("##", getString("beat")).c_str(), &beat, step, step_fast, "%.3f");
 			ImGui::NextColumn();
 
 			if (beatChanged)
 			{
-				// 浮動小数点数の微細な誤差を防ぐため floor から round に変更
 				auto newTick = std::round(beat * TICKS_PER_BEAT); 
 				for (auto& id : context.selectedNotes)
 				{
@@ -376,6 +376,8 @@ namespace MikuMikuWorld
 							{
 								auto& n = context.score.notes.at(id);
 								n.dummy = note.dummy;
+								if (n.dummy)
+									n.soundEffect = SoundEffectType::Default;
 							}
 							edited = true;
 						}
@@ -441,9 +443,36 @@ namespace MikuMikuWorld
 					{
 						auto& n = context.score.notes.at(id);
 						n.dummy = note.dummy;
+						if (n.dummy)
+							n.soundEffect = SoundEffectType::Default;
 					}
 					edited = true;
 				}
+			}
+
+			bool hasEditableSoundEffect = false;
+			SoundEffectType soundEffect = note.soundEffect;
+			for (auto id : context.selectedNotes)
+			{
+				auto& n = context.score.notes.at(id);
+				if (!n.canSoundEffect())
+					continue;
+				if (!hasEditableSoundEffect)
+					soundEffect = n.soundEffect;
+				hasEditableSoundEffect = true;
+			}
+
+			if (hasEditableSoundEffect &&
+			    UI::addSelectProperty(getString("sound_effect"), soundEffect,
+			                          soundEffectTypes, arrayLength(soundEffectTypes)))
+			{
+				for (auto& id : context.selectedNotes)
+				{
+					auto& n = context.score.notes.at(id);
+					if (n.canSoundEffect())
+						n.soundEffect = soundEffect;
+				}
+				edited = true;
 			}
 
 			UI::endPropertyColumns();
@@ -475,6 +504,8 @@ namespace MikuMikuWorld
 						Note easeableNote;
 						bool hasStepType = false;
 						Note stepTypeNote;
+						bool hasStepLayer = false;
+						Note stepLayerNote;
 						for (auto id : context.selectedNotes)
 						{
 							auto& n = context.score.notes.at(id);
@@ -493,6 +524,14 @@ namespace MikuMikuWorld
 									stepTypeNote = n;
 								}
 								hasStepType = true;
+							}
+							if (n.getType() == NoteType::Hold || n.getType() == NoteType::HoldMid)
+							{
+								if (!hasStepLayer)
+								{
+									stepLayerNote = n;
+								}
+								hasStepLayer = true;
 							}
 						}
 
@@ -541,6 +580,45 @@ namespace MikuMikuWorld
 										step.type = stepType;
 									}
 								}
+							}
+						}
+
+						if (hasStepLayer)
+						{
+							HoldStepLayer stepLayer = HoldStepLayer::Top;
+							if (stepLayerNote.getType() == NoteType::Hold)
+							{
+								stepLayer = hold.start.layer;
+							}
+							else
+							{
+								int stepIndex = findHoldStep(hold, stepLayerNote.ID);
+								if (stepIndex != -1)
+								{
+									stepLayer = hold.steps.at(stepIndex).layer;
+								}
+							}
+
+							if (UI::addSelectProperty(getString("hold_step_layer"), stepLayer,
+							                          holdStepLayers, arrayLength(holdStepLayers)))
+							{
+								for (auto id : context.selectedNotes)
+								{
+									auto& note = context.score.notes.at(id);
+									if (note.getType() == NoteType::Hold)
+									{
+										hold.start.layer = stepLayer;
+									}
+									else if (note.getType() == NoteType::HoldMid)
+									{
+										int localStepIndex = findHoldStep(hold, note.ID);
+										if (localStepIndex != -1)
+										{
+											hold.steps.at(localStepIndex).layer = stepLayer;
+										}
+									}
+								}
+								edited = true;
 							}
 						}
 
@@ -1756,9 +1834,6 @@ namespace MikuMikuWorld
 			ImGui::PushStyleColor(ImGuiCol_ChildBg, ImGui::GetStyleColorVec4(ImGuiCol_FrameBg));
 			float layersButtonHeight = ImGui::GetFrameHeight();
 
-			// =====================================================================
-			// 上部アイコンバー
-			// =====================================================================
 			ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(4, 4));
 
 			bool showAllLayers = context.showAllLayers;
@@ -1773,7 +1848,7 @@ namespace MikuMikuWorld
 			if (UI::transparentButton(ICON_FA_PLUS, ImVec2(layersButtonHeight, layersButtonHeight), false))
 			{
 				Layer newLayer;
-				newLayer.name = getString("new_layer"); // 日本語化
+				newLayer.name = getString("new_layer");
 				newLayer.isFolder = false;
 				context.score.layers.push_back(newLayer);
 				
@@ -1790,7 +1865,7 @@ namespace MikuMikuWorld
 			if (UI::transparentButton(ICON_FA_FOLDER_PLUS, ImVec2(layersButtonHeight, layersButtonHeight), false))
 			{
 				Layer newLayer;
-				newLayer.name = getString("new_folder"); // 日本語化
+				newLayer.name = getString("new_folder");
 				newLayer.isFolder = true;
 				context.score.layers.push_back(newLayer);
 				
@@ -1820,8 +1895,42 @@ namespace MikuMikuWorld
 
 			ImGui::PopStyleVar();
 			ImGui::Separator();
-			// =====================================================================
 
+			if (context.selectedLayer >= 0 && context.selectedLayer < context.score.layers.size() &&
+			    !context.score.layers[context.selectedLayer].isFolder)
+			{
+				const int selectedLayerIndex = context.selectedLayer;
+				const Layer& selectedLayer = context.score.layers[selectedLayerIndex];
+				bool forceNoteSpeedEnabled = selectedLayer.forceNoteSpeed >= 1.0f &&
+				                             selectedLayer.forceNoteSpeed <= 12.0f;
+				float forceNoteSpeed = forceNoteSpeedEnabled ? selectedLayer.forceNoteSpeed : 6.0f;
+				bool forceNoteSpeedEdited = false;
+
+				UI::beginPropertyColumns();
+				UI::propertyLabel(getString("layer_force_note_speed_enabled"));
+				forceNoteSpeedEdited |= ImGui::Checkbox("##layer_force_note_speed_enabled", &forceNoteSpeedEnabled);
+				ImGui::NextColumn();
+				if (forceNoteSpeedEnabled)
+				{
+					forceNoteSpeedEdited |= UI::addFloatProperty(
+					    getString("layer_force_note_speed"), forceNoteSpeed, "%.2fx", 1.0f, 12.0f);
+				}
+				UI::endPropertyColumns();
+
+				if (forceNoteSpeedEdited)
+				{
+					if (forceNoteSpeed < 1.0f)
+						forceNoteSpeed = 1.0f;
+					else if (forceNoteSpeed > 12.0f)
+						forceNoteSpeed = 12.0f;
+
+					Score prev = context.score;
+					context.score.layers[selectedLayerIndex].forceNoteSpeed =
+					    forceNoteSpeedEnabled ? forceNoteSpeed : 0.0f;
+					context.pushHistory("Change layer force note speed", prev, context.score);
+				}
+				ImGui::Separator();
+			}
 			float windowHeight = ImGui::GetContentRegionAvail().y - ImGui::GetStyle().WindowPadding.y;
 
 			if (ImGui::BeginChild("layers_child_window", ImVec2(-1, windowHeight), true))
@@ -2102,9 +2211,6 @@ namespace MikuMikuWorld
 				context.pushHistory("Toggle Solo Layer", prev, context.score);
 			}
 
-			// =====================================================================
-			// 日本語化されたポップアップ
-			// =====================================================================
 			if (ImGui::BeginPopupModal(getString("layer_delete_confirm"), NULL, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings))
 			{
 				ImGui::Text("%s", getString("layer_delete_msg1"));
@@ -2253,7 +2359,7 @@ namespace MikuMikuWorld
 			if (renameIndex == -2)
 				ImGui::Text("Folder Name");
 			else
-				ImGui::Text("%s", getString("layer_name")); // 余計な .c_str() を削除
+				ImGui::Text("%s", getString("layer_name"));
 
 			ImGui::SetNextItemWidth(-1);
 			ImGui::InputText("##layer_name", &layerName);
@@ -2263,7 +2369,7 @@ namespace MikuMikuWorld
 			              ImGui::GetFrameHeight() };
 			ImGui::SetCursorPos(ImVec2(xPos, yPos));
 			
-			if (ImGui::Button(getString("cancel"), btnSz)) // 余計な .c_str() を削除
+			if (ImGui::Button(getString("cancel"), btnSz))
 			{
 				result = DialogResult::Cancel;
 				ImGui::CloseCurrentPopup();
@@ -2273,7 +2379,7 @@ namespace MikuMikuWorld
 			ImGui::PushItemFlag(ImGuiItemFlags_Disabled, !layerName.size());
 			ImGui::PushStyleVar(ImGuiStyleVar_Alpha, 1 - (0.5f * !layerName.size()));
 			
-			if (ImGui::Button(getString("confirm"), btnSz)) // 余計な .c_str() を削除
+			if (ImGui::Button(getString("confirm"), btnSz))
 			{
 				result = DialogResult::Ok;
 				ImGui::CloseCurrentPopup();
@@ -2348,6 +2454,39 @@ namespace MikuMikuWorld
 			if (!canDelete) ImGui::EndDisabled();
 
 			ImGui::PopStyleVar();
+			ImGui::Separator();
+
+			if (ImGui::Button(getString("insert_skill"), ImVec2(-1, waypointButtonHeight)))
+			{
+				Score prev = context.score;
+				id_t id = getNextSkillID();
+				context.score.skills.emplace(id, SkillTrigger{ id, context.currentTick, SkillEffect::Score, static_cast<uint8_t>(1) });
+				context.pushHistory("Insert skill", prev, context.score);
+			}
+
+			ImVec2 halfBtnSize = {
+				(ImGui::GetContentRegionAvail().x - ImGui::GetStyle().ItemSpacing.x) / 2,
+				waypointButtonHeight
+			};
+			if (ImGui::Button(getString("set_fever_start"), halfBtnSize))
+			{
+				if (context.score.fever.startTick != context.currentTick)
+				{
+					Score prev = context.score;
+					context.score.fever.startTick = context.currentTick;
+					context.pushHistory("Set fever start", prev, context.score);
+				}
+			}
+			ImGui::SameLine();
+			if (ImGui::Button(getString("set_fever_end"), halfBtnSize))
+			{
+				if (context.score.fever.endTick != context.currentTick)
+				{
+					Score prev = context.score;
+					context.score.fever.endTick = context.currentTick;
+					context.pushHistory("Set fever end", prev, context.score);
+				}
+			}
 			ImGui::Separator();
 
 			float windowHeight = ImGui::GetContentRegionAvail().y - ImGui::GetStyle().WindowPadding.y;

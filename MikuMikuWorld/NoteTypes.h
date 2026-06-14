@@ -28,6 +28,29 @@ namespace MikuMikuWorld
 		"none", "default", "left", "right", "down", "down_left", "down_right"
 	};
 
+	enum class SoundEffectType : uint8_t
+	{
+		Default,
+		None,
+		TapPerfect,
+		Flick,
+		Trace,
+		Tick,
+		CritTap,
+		CritFlick,
+		CritTrace,
+		CritTick,
+		Damage,
+		SoundEffectTypeCount
+	};
+
+	constexpr const char* soundEffectTypes[]{
+		"sound_effect_default", "sound_effect_none",       "sound_effect_tap_perfect",
+		"sound_effect_flick",   "sound_effect_trace",      "sound_effect_tick",
+		"sound_effect_crit_tap", "sound_effect_crit_flick", "sound_effect_crit_trace",
+		"sound_effect_crit_tick", "sound_effect_damage"
+	};
+
 	enum class HoldStepType : uint8_t
 	{
 		Normal,
@@ -70,6 +93,20 @@ namespace MikuMikuWorld
 	};
 
 	constexpr const char* holdEndTypes[]{ "normal", "trace", "hidden" };
+
+	enum class HoldStepLayer : uint8_t
+	{
+		Top,
+		Bottom,
+		Under,
+		Over,
+		LayerCount
+	};
+
+	constexpr const char* holdStepLayers[]{
+		"hold_step_layer_top", "hold_step_layer_bottom",
+		"hold_step_layer_under", "hold_step_layer_over"
+	};
 
 	enum class GuideColor : uint8_t
 	{

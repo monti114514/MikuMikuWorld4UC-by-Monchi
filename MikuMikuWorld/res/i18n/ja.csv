@@ -379,3 +379,39 @@ gallery_created, 作成日時
 gallery_name_sort, 名前順
 gallery_modified, 編集日時
 gallery_return_to_editor, エディタに戻る
+
+# Upstream LevelData fields
+life_point,ライフポイント
+sound_effect,SE
+sound_effect_default,デフォルト
+sound_effect_none,なし
+sound_effect_tap_perfect,TapPerfect
+sound_effect_flick,Flick
+sound_effect_trace,Trace
+sound_effect_tick,Tick
+sound_effect_crit_tap,CritTap
+sound_effect_crit_flick,CritFlick
+sound_effect_crit_trace,CritTrace
+sound_effect_crit_tick,CritTick
+sound_effect_damage,Damage
+hold_step_layer,ホールド中継点レイヤー
+hold_step_layer_top,上
+hold_step_layer_bottom,下
+hold_step_layer_under,最背面
+hold_step_layer_over,最前面
+skill_effect,エフェクト
+skill_effect_score,スコアブースト
+skill_effect_heal,ライフ回復
+skill_effect_perfect,判定強化
+skill_level,レベル
+skill_effect_score_desc,発動中にスコア獲得量を上げます。
+skill_effect_heal_desc,発動時にライフを回復します。
+skill_effect_perfect_desc,発動中に判定を補助します。
+skill_level_desc,レベル1-4がSkill.levelとして出力されます。
+fever_start_tick,FEVER開始Tick
+fever_end_tick,FEVER終了Tick
+layer_force_note_speed_enabled,ノーツ速度固定
+layer_force_note_speed,ノーツ速度固定
+insert_skill,スキルを追加
+set_fever_start,FEVER開始を設定
+set_fever_end,FEVER終了を設定

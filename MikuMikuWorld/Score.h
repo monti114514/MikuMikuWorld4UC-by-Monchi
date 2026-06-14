@@ -13,10 +13,24 @@ namespace MikuMikuWorld
 	id_t getNextSkillID();
 	id_t getNextHiSpeedID();
 
+	enum class SkillEffect : uint8_t
+	{
+		Score,
+		Heal,
+		Perfect,
+		EffectCount
+	};
+
+	constexpr const char* skillEffectTypes[]{
+		"skill_effect_score", "skill_effect_heal", "skill_effect_perfect"
+	};
+
 	struct SkillTrigger
 	{
 		id_t ID;
 		int tick;
+		SkillEffect effect = SkillEffect::Score;
+		uint8_t level = 1;
 	};
 
 	struct Fever
@@ -28,12 +42,13 @@ namespace MikuMikuWorld
 	struct Layer
 	{
 		std::string name;
+		float forceNoteSpeed = 0.0f;
 		bool hidden = false;
 
-		// --- フォルダ機能用の拡張 ---
-		bool isFolder = false;    // 自分が「フォルダ」であるかどうか
-		bool inFolder = false;    // 自分が直上のフォルダに「属している」かどうか
-		bool isCollapsed = false; // フォルダが折りたたまれているかどうか（UI用）
+		// Layer folder UI state.
+		bool isFolder = false;
+		bool inFolder = false;
+		bool isCollapsed = false;
 	};
 
 	struct Waypoint
@@ -63,6 +78,7 @@ namespace MikuMikuWorld
 		float musicOffset;
 
 		int laneExtension = 0;
+		int baseLifePoint = 1000;
 	};
 
 	struct Score

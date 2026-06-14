@@ -13,6 +13,26 @@ namespace MikuMikuWorld::Effect
 	constexpr int UNDER_NOTE_ORDER_THRESHOLD = 5;
 	constexpr float EFFECT_WIDTH_RATIO = 0.84f;
 
+	static bool isNoteEffectSuppressed(const Note& note, const ScoreContext& context)
+	{
+		if (note.dummy || note.getType() == NoteType::Damage)
+			return true;
+
+		if (note.getType() == NoteType::Hold)
+		{
+			const auto holdIt = context.score.holdNotes.find(note.ID);
+			return holdIt != context.score.holdNotes.end() && holdIt->second.dummy;
+		}
+
+		if (note.getType() == NoteType::HoldMid || note.getType() == NoteType::HoldEnd)
+		{
+			const auto holdIt = context.score.holdNotes.find(note.parentID);
+			return holdIt != context.score.holdNotes.end() && holdIt->second.dummy;
+		}
+
+		return false;
+	}
+
 	static const std::map<EffectType, int> effectPoolSizes =
 	{
 		{ fx_note_normal_gen, 6 },
@@ -214,6 +234,8 @@ namespace MikuMikuWorld::Effect
 		{
 			const auto& [id, note] = *it;
 			if (isNoteEffectPlayed(id))
+				continue;
+			if (isNoteEffectSuppressed(note, context))
 				continue;
 
 			bool isMidHold = false;

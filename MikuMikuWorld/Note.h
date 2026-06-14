@@ -23,11 +23,12 @@ namespace MikuMikuWorld
 	constexpr const char* SE_CRITICAL_TICK = "critical_tick";
 	constexpr const char* SE_CRITICAL_FRICTION = "critical_friction";
 	constexpr const char* SE_CRITICAL_CONNECT = "critical_connect";
+	constexpr const char* SE_DAMAGE = "damage";
 
 	constexpr const char* SE_NAMES[] = { SE_PERFECT,         SE_FLICK,         SE_TICK,
 		                                 SE_FRICTION,        SE_CONNECT,       SE_CRITICAL_TAP,
 		                                 SE_CRITICAL_FLICK,  SE_CRITICAL_TICK, SE_CRITICAL_FRICTION,
-		                                 SE_CRITICAL_CONNECT };
+		                                 SE_CRITICAL_CONNECT, SE_DAMAGE };
 
 	constexpr float flickArrowWidths[] = { 0.95f, 1.25f, 1.8f, 2.3f, 2.6f, 3.2f };
 
@@ -72,6 +73,7 @@ namespace MikuMikuWorld
 		bool friction{ false };
 		bool dummy{ false };
 		FlickType flick{ FlickType::None };
+		SoundEffectType soundEffect{ SoundEffectType::Default };
 
 		int layer{ 0 };
 
@@ -89,6 +91,7 @@ namespace MikuMikuWorld
 		bool hasEase() const;
 		bool canFlick() const;
 		bool canTrace() const;
+		constexpr bool canSoundEffect() const { return !dummy; }
 	};
 
 	struct HoldStep
@@ -96,6 +99,7 @@ namespace MikuMikuWorld
 		id_t ID;
 		HoldStepType type;
 		EaseType ease;
+		HoldStepLayer layer{ HoldStepLayer::Top };
 
 		inline bool canEase() const
 		{

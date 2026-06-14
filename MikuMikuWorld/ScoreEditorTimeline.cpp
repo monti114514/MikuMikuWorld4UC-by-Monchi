@@ -9,6 +9,7 @@
 #include "UI.h"
 #include "Utilities.h"
 #include <algorithm>
+#include <climits>
 #include <string>
 #include <vector>
 
@@ -850,11 +851,27 @@ namespace MikuMikuWorld
 			drawList->AddTriangleFilled({ x, y2 }, { x + 10, y2 }, { x + 10, y2 + 10 }, 0xFFCCCCCC);
 		}
 
-		feverControl(context, context.score.fever);
+		if (feverControl(context, context.score.fever))
+		{
+			eventEdit.editId = 0;
+			eventEdit.editFeverStartTick = context.score.fever.startTick;
+			eventEdit.editFeverEndTick = context.score.fever.endTick;
+			eventEdit.type = EventType::Fever;
+			ImGui::OpenPopup("edit_event");
+		}
 
 		// Update skill triggers
-		for (const auto& [_, skill] : context.score.skills)
-			skillControl(context, skill);
+		for (const auto& [id, skill] : context.score.skills)
+		{
+			if (skillControl(context, skill))
+			{
+				eventEdit.editId = id;
+				eventEdit.editSkillEffect = skill.effect;
+				eventEdit.editSkillLevel = skill.level;
+				eventEdit.type = EventType::Skill;
+				ImGui::OpenPopup("edit_event");
+			}
+		}
 
 		eventEditor(context);
 		updateNotes(context, edit, renderer);
@@ -2623,7 +2640,16 @@ namespace MikuMikuWorld
 
 	bool ScoreEditorTimeline::skillControl(const ScoreContext& context, const SkillTrigger& skill)
 	{
-		return skillControl(context, skill.tick, !playing);
+		const int effectIndex = static_cast<int>(skill.effect);
+		const char* effectName = isArrayIndexInBounds(effectIndex, skillEffectTypes)
+		                             ? getString(skillEffectTypes[effectIndex])
+		                             : getString("skill");
+		float dpiScale = ImGui::GetMainViewport()->DpiScale;
+		Vector2 pos{ getTimelineStartX(context) - (85 * dpiScale),
+			         position.y - tickToPosition(skill.tick) + visualOffset };
+		return eventControl(getTimelineStartX(context), pos, skillColor,
+		                    IO::formatString("%s Lv.%d", effectName, skill.level).c_str(),
+		                    !playing);
 	}
 
 	bool ScoreEditorTimeline::skillControl(const ScoreContext& context, int tick, bool enabled)
@@ -2862,6 +2888,95 @@ namespace MikuMikuWorld
 						context.score.hiSpeedChanges.erase(eventEdit.editId);
 						context.pushHistory("Remove hi-speed change", prev, context.score);
 					}
+				}
+			}
+			else if (eventEdit.type == EventType::Skill)
+			{
+				if (context.score.skills.find(eventEdit.editId) == context.score.skills.end())
+				{
+					ImGui::CloseCurrentPopup();
+					ImGui::EndPopup();
+					return;
+				}
+
+				bool eventEdited = false;
+				UI::beginPropertyColumns();
+				if (ImGui::IsWindowAppearing())
+					ImGui::SetColumnWidth(0, minimumColumnWidth);
+				eventEdited |= UI::addSelectProperty(fitColumn(getString("skill_effect")),
+				                                     eventEdit.editSkillEffect, skillEffectTypes,
+				                                     arrayLength(skillEffectTypes));
+				eventEdited |= UI::addIntProperty(fitColumn(getString("skill_level")),
+				                                  eventEdit.editSkillLevel, "Lv.%d", 1, 4);
+				UI::endPropertyColumns();
+
+				switch (eventEdit.editSkillEffect)
+				{
+				case SkillEffect::Score:
+					ImGui::TextWrapped("%s", getString("skill_effect_score_desc"));
+					break;
+				case SkillEffect::Heal:
+					ImGui::TextWrapped("%s", getString("skill_effect_heal_desc"));
+					break;
+				case SkillEffect::Perfect:
+					ImGui::TextWrapped("%s", getString("skill_effect_perfect_desc"));
+					break;
+				default:
+					break;
+				}
+				ImGui::TextDisabled("%s", getString("skill_level_desc"));
+
+				SkillTrigger& skill = context.score.skills[eventEdit.editId];
+				if (eventEdited)
+				{
+					Score prev = context.score;
+					skill.effect = eventEdit.editSkillEffect;
+					skill.level = static_cast<uint8_t>(std::clamp(eventEdit.editSkillLevel, 1, 4));
+					context.pushHistory("Change skill trigger", prev, context.score);
+				}
+
+				ImGui::Separator();
+				if (ImGui::Button(getString("remove"), ImVec2(-1, UI::btnSmall.y + 2)))
+				{
+					ImGui::CloseCurrentPopup();
+					Score prev = context.score;
+					context.score.skills.erase(eventEdit.editId);
+					context.pushHistory("Remove skill trigger", prev, context.score);
+				}
+			}
+			else if (eventEdit.type == EventType::Fever)
+			{
+				bool eventEdited = false;
+				UI::beginPropertyColumns();
+				if (ImGui::IsWindowAppearing())
+					ImGui::SetColumnWidth(0, minimumColumnWidth);
+				eventEdited |= UI::addIntProperty(fitColumn(getString("fever_start_tick")),
+				                                  eventEdit.editFeverStartTick, -1, INT_MAX);
+				eventEdited |= UI::addIntProperty(fitColumn(getString("fever_end_tick")),
+				                                  eventEdit.editFeverEndTick, -1, INT_MAX);
+				UI::endPropertyColumns();
+
+				if (eventEdited)
+				{
+					Score prev = context.score;
+					if (eventEdit.editFeverStartTick >= 0 && eventEdit.editFeverEndTick >= 0 &&
+					    eventEdit.editFeverEndTick < eventEdit.editFeverStartTick)
+					{
+						eventEdit.editFeverEndTick = eventEdit.editFeverStartTick;
+					}
+					context.score.fever.startTick = eventEdit.editFeverStartTick;
+					context.score.fever.endTick = eventEdit.editFeverEndTick;
+					context.pushHistory("Change FEVER event", prev, context.score);
+				}
+
+				ImGui::Separator();
+				if (ImGui::Button(getString("remove"), ImVec2(-1, UI::btnSmall.y + 2)))
+				{
+					ImGui::CloseCurrentPopup();
+					Score prev = context.score;
+					context.score.fever.startTick = -1;
+					context.score.fever.endTick = -1;
+					context.pushHistory("Remove FEVER event", prev, context.score);
 				}
 			}
 			else if (eventEdit.type == EventType::Waypoint)
@@ -3206,6 +3321,13 @@ namespace MikuMikuWorld
                     playSE = false;
                 }
             }
+			if (note.isHold())
+			{
+				const id_t holdId = note.getType() == NoteType::Hold ? note.ID : note.parentID;
+				const auto holdIt = context.score.holdNotes.find(holdId);
+				if (holdIt != context.score.holdNotes.end() && holdIt->second.dummy)
+					playSE = false;
+			}
 			if (note.dummy)
 			{
 				playSE = false;

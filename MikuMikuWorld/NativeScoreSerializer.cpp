@@ -1,4 +1,5 @@
 #include "NativeScoreSerializer.h"
+#include <algorithm>
 
 namespace MikuMikuWorld
 {
@@ -21,6 +22,12 @@ namespace MikuMikuWorld
 	// Version 2: Support hispeed easing, skip, hides note; down flicks
 	const int UC_MMWS_VERSION = 2;
 	const char* UC_MMWS_SIGNATURE = "UCMMWS";
+	// Version 1: Monchi native layout based on UC v2 plus life point, extended skill,
+	// sound effect, hold step layer, and force note speed.
+	const int MCH_MMWS_VERSION = 1;
+	const char* MCH_MMWS_SIGNATURE = "MCHMMWS";
+	const int MCH_LAYER_EXTENSION_VERSION = 1;
+	const char* MCH_LAYER_EXTENSION_SIGNATURE = "MCH_LAYER_EXT";
 
 	enum NoteFlags
 	{
@@ -37,18 +44,36 @@ namespace MikuMikuWorld
 		HOLD_DUMMY = 1 << 3
 	};
 
+	enum LayerFlags
+	{
+		LAYER_HIDDEN = 1 << 0,
+		LAYER_IS_FOLDER = 1 << 1,
+		LAYER_IN_FOLDER = 1 << 2,
+		LAYER_IS_COLLAPSED = 1 << 3
+	};
+
 	struct NativeScoreSerializer::ScoreVersion
 	{
 		int version;
 		int cyanvasVersion;
 		int untitledVersion;
+		int monchiVersion;
 
-		ScoreVersion() : version(0), cyanvasVersion(0), untitledVersion(0) {}
+		ScoreVersion() : version(0), cyanvasVersion(0), untitledVersion(0), monchiVersion(0) {}
 		ScoreVersion(int ucVersion, int ccVersion = CC_MMWS_VERSION, int version = MMWS_VERSION)
-		    : version(version), cyanvasVersion(ccVersion), untitledVersion(ucVersion)
+		    : version(version), cyanvasVersion(ccVersion), untitledVersion(ucVersion),
+		      monchiVersion(0)
 		{
 		}
 
+		static ScoreVersion Monchi(int mchVersion)
+		{
+			ScoreVersion result(UC_MMWS_VERSION);
+			result.monchiVersion = mchVersion;
+			return result;
+		}
+
+		inline bool isMonchiNative() const { return monchiVersion > 0; }
 		inline bool supportSkillFever() const { return version >= 2; }
 		inline bool supportJacket() const { return version >= 2; }
 		inline bool supportAddress() const { return version >= 3; }
@@ -64,13 +89,67 @@ namespace MikuMikuWorld
 		inline bool supportDummyNote() const { return cyanvasVersion >= 6 && untitledVersion >= 1; }
 		inline bool supportHispeedSkipEase() const { return untitledVersion >= 2; }
 		inline bool supportDownFlick() const { return untitledVersion >= 2; }
+		inline bool supportExtendedSkill() const { return isMonchiNative() || untitledVersion >= 3; }
+		inline bool supportSoundEffect() const { return isMonchiNative() || untitledVersion >= 3; }
+		inline bool supportLifePoint() const { return isMonchiNative() || untitledVersion >= 3; }
+		inline bool supportHoldLayer() const { return isMonchiNative() || untitledVersion >= 3; }
+		inline bool supportForceNoteSpeed() const { return isMonchiNative() || untitledVersion >= 4; }
 
 		inline bool isSupportedVersion() const
 		{
+			if (isMonchiNative())
+				return version <= MMWS_VERSION && cyanvasVersion <= CC_MMWS_VERSION &&
+				       monchiVersion <= MCH_MMWS_VERSION;
 			return version <= MMWS_VERSION && cyanvasVersion <= CC_MMWS_VERSION &&
 			       untitledVersion <= UC_MMWS_VERSION;
 		}
 	};
+
+	namespace
+	{
+		SoundEffectType readSoundEffect(unsigned int value)
+		{
+			if (value >= static_cast<unsigned int>(SoundEffectType::SoundEffectTypeCount))
+				return SoundEffectType::Default;
+			return static_cast<SoundEffectType>(value);
+		}
+
+		HoldStepLayer readHoldStepLayer(unsigned int value)
+		{
+			if (value >= static_cast<unsigned int>(HoldStepLayer::LayerCount))
+				return HoldStepLayer::Top;
+			return static_cast<HoldStepLayer>(value);
+		}
+
+		SkillEffect readSkillEffect(unsigned int value)
+		{
+			if (value >= static_cast<unsigned int>(SkillEffect::EffectCount))
+				return SkillEffect::Score;
+			return static_cast<SkillEffect>(value);
+		}
+
+		unsigned int toLayerFlags(const Layer& layer)
+		{
+			unsigned int flags = 0;
+			if (layer.hidden)
+				flags |= LAYER_HIDDEN;
+			if (layer.isFolder)
+				flags |= LAYER_IS_FOLDER;
+			if (layer.inFolder)
+				flags |= LAYER_IN_FOLDER;
+			if (layer.isCollapsed)
+				flags |= LAYER_IS_COLLAPSED;
+			return flags;
+		}
+
+		void applyLayerFlags(Layer& layer, unsigned int flags)
+		{
+			layer.hidden = (flags & LAYER_HIDDEN) != 0;
+			layer.isFolder = (flags & LAYER_IS_FOLDER) != 0;
+			layer.inFolder = (flags & LAYER_IN_FOLDER) != 0;
+			layer.isCollapsed = (flags & LAYER_IS_COLLAPSED) != 0;
+		}
+	}
 
 	Note NativeScoreSerializer::readNote(NoteType type, IO::BinaryReader& reader,
 	                                     const ScoreVersion& version)
@@ -89,6 +168,9 @@ namespace MikuMikuWorld
 			note.lane = reader.readUInt32();
 			note.width = reader.readUInt32();
 		}
+
+		if (version.supportSoundEffect())
+			note.soundEffect = readSoundEffect(reader.readUInt32());
 
 		if (version.supportLayers())
 			note.layer = reader.readUInt32();
@@ -114,6 +196,7 @@ namespace MikuMikuWorld
 		writer.writeSingle(note.lane);
 		writer.writeSingle(note.width);
 
+		writer.writeInt32(static_cast<int>(note.soundEffect));
 		writer.writeInt32(note.layer);
 
 		if (!note.hasEase())
@@ -145,6 +228,9 @@ namespace MikuMikuWorld
 		if (version.supportLaneExtension())
 			metadata.laneExtension = reader.readUInt32();
 
+		if (version.supportLifePoint())
+			metadata.baseLifePoint = reader.readUInt32();
+
 		return metadata;
 	}
 
@@ -158,6 +244,7 @@ namespace MikuMikuWorld
 		writer.writeSingle(metadata.musicOffset);
 		writer.writeString(metadata.jacketFile);
 		writer.writeInt32(metadata.laneExtension);
+		writer.writeInt32(metadata.baseLifePoint);
 	}
 
 	void NativeScoreSerializer::readScoreEvents(Score& score, IO::BinaryReader& reader,
@@ -192,6 +279,9 @@ namespace MikuMikuWorld
 		if (version.supportHispeed())
 		{
 			int hiSpeedCount = reader.readUInt32();
+			if (hiSpeedCount)
+				score.hiSpeedChanges.clear();
+
 			for (int i = 0; i < hiSpeedCount; ++i)
 			{
 				int tick = reader.readUInt32();
@@ -214,8 +304,15 @@ namespace MikuMikuWorld
 			for (int i = 0; i < skillCount; ++i)
 			{
 				int tick = reader.readUInt32();
+				SkillEffect effect = SkillEffect::Score;
+				uint8_t level = 1;
+				if (version.supportExtendedSkill())
+				{
+					effect = readSkillEffect(reader.readUInt32());
+					level = static_cast<uint8_t>(std::clamp(reader.readUInt32(), 1u, 4u));
+				}
 				id_t id = getNextSkillID();
-				score.skills.emplace(id, SkillTrigger{ id, tick });
+				score.skills.emplace(id, SkillTrigger{ id, tick, effect, level });
 			}
 
 			score.fever.startTick = reader.readUInt32();
@@ -255,6 +352,8 @@ namespace MikuMikuWorld
 		for (const auto& [_, skill] : score.skills)
 		{
 			writer.writeInt32(skill.tick);
+			writer.writeInt32(static_cast<int>(skill.effect));
+			writer.writeInt32(skill.level);
 		}
 
 		writer.writeInt32(score.fever.startTick);
@@ -270,14 +369,31 @@ namespace MikuMikuWorld
 
 		std::string signature = reader.readString();
 		if (signature != MMWS_SIGNATURE && signature != CC_MMWS_SIGNATURE &&
-		    signature != UC_MMWS_SIGNATURE)
+		    signature != UC_MMWS_SIGNATURE && signature != MCH_MMWS_SIGNATURE)
 			throw std::runtime_error("Invalid MMWS file. Unrecognized signature");
 
-		ScoreVersion version =
-		    signature == UC_MMWS_SIGNATURE ? ScoreVersion(reader.readUInt32())
-		    : signature == CC_MMWS_SIGNATURE
-		        ? ScoreVersion(0, std::max((int)reader.readUInt16(), 1), (int)reader.readUInt16())
-		        : ScoreVersion(0, 0, reader.readUInt32());
+		ScoreVersion version;
+		if (signature == MCH_MMWS_SIGNATURE)
+		{
+			version = ScoreVersion::Monchi(reader.readUInt32());
+		}
+		else if (signature == UC_MMWS_SIGNATURE)
+		{
+			int ucVersion = reader.readUInt32();
+			if (ucVersion > UC_MMWS_VERSION)
+				throw std::runtime_error(
+				    "Importing upstream UCMMWS v3/v4 is not implemented yet.");
+			version = ScoreVersion(ucVersion);
+		}
+		else if (signature == CC_MMWS_SIGNATURE)
+		{
+			version = ScoreVersion(0, std::max((int)reader.readUInt16(), 1),
+			                       (int)reader.readUInt16());
+		}
+		else
+		{
+			version = ScoreVersion(0, 0, reader.readUInt32());
+		}
 
 		if (!version.isSupportedVersion())
 			throw std::runtime_error(
@@ -366,6 +482,8 @@ namespace MikuMikuWorld
 			{
 				hold.guideColor = start.critical ? GuideColor::Yellow : GuideColor::Green;
 			}
+			if (version.supportHoldLayer())
+				hold.start.layer = readHoldStepLayer(reader.readUInt32());
 			score.notes[start.ID] = start;
 
 			int stepCount = reader.readUInt32();
@@ -380,6 +498,8 @@ namespace MikuMikuWorld
 				HoldStep step{};
 				step.type = static_cast<HoldStepType>(reader.readUInt32());
 				step.ease = static_cast<EaseType>(reader.readUInt32());
+				if (version.supportHoldLayer())
+					step.layer = readHoldStepLayer(reader.readUInt32());
 				step.ID = mid.ID;
 				hold.steps.push_back(step);
 			}
@@ -417,7 +537,32 @@ namespace MikuMikuWorld
 			for (int i = 0; i < layerCount; ++i)
 			{
 				std::string name = reader.readString();
-				score.layers.push_back({ name });
+				float forceNoteSpeed = version.supportForceNoteSpeed() ? reader.readSingle() : 0.0f;
+				if (forceNoteSpeed < 1.0f || forceNoteSpeed > 12.0f)
+					forceNoteSpeed = 0.0f;
+				score.layers.push_back({ name, forceNoteSpeed });
+			}
+
+			if (version.isMonchiNative() && reader.getStreamPosition() < waypointsAddress)
+			{
+				std::string extensionSignature = reader.readString();
+				if (extensionSignature == MCH_LAYER_EXTENSION_SIGNATURE)
+				{
+					int extensionVersion = reader.readUInt32();
+					if (extensionVersion <= MCH_LAYER_EXTENSION_VERSION)
+					{
+						int extensionLayerCount = reader.readUInt32();
+						for (int i = 0; i < extensionLayerCount &&
+						                reader.getStreamPosition() + sizeof(uint32_t) <=
+						                    waypointsAddress;
+						     ++i)
+						{
+							unsigned int flags = reader.readUInt32();
+							if (i < score.layers.size())
+								applyLayerFlags(score.layers[i], flags);
+						}
+					}
+				}
 			}
 		}
 
@@ -447,10 +592,10 @@ namespace MikuMikuWorld
 			return;
 
 		// signature
-		writer.writeString(UC_MMWS_SIGNATURE);
+		writer.writeString(MCH_MMWS_SIGNATURE);
 
 		// version
-		writer.writeInt32(UC_MMWS_VERSION);
+		writer.writeInt32(MCH_MMWS_VERSION);
 
 		// offsets address in order: metadata -> events -> taps -> holds
 		// Cyanvas extension: -> damages -> layers -> waypoints
@@ -504,6 +649,7 @@ namespace MikuMikuWorld
 			writer.writeInt32((int)hold.start.ease);
 			writer.writeInt32((int)hold.fadeType);
 			writer.writeInt32((int)hold.guideColor);
+			writer.writeInt32((int)hold.start.layer);
 
 			// steps
 			int stepCount = hold.steps.size();
@@ -514,6 +660,7 @@ namespace MikuMikuWorld
 				writeNote(mid, writer);
 				writer.writeInt32((int)step.type);
 				writer.writeInt32((int)step.ease);
+				writer.writeInt32((int)step.layer);
 			}
 
 			// end
@@ -547,9 +694,19 @@ namespace MikuMikuWorld
 		for (const auto& layer : score.layers)
 		{
 			writer.writeString(layer.name);
+			writer.writeSingle(layer.forceNoteSpeed);
 		}
 
 		uint32_t waypointsAddress = writer.getStreamPosition();
+		writer.writeString(MCH_LAYER_EXTENSION_SIGNATURE);
+		writer.writeInt32(MCH_LAYER_EXTENSION_VERSION);
+		writer.writeInt32(score.layers.size());
+		for (const auto& layer : score.layers)
+		{
+			writer.writeInt32(toLayerFlags(layer));
+		}
+
+		waypointsAddress = writer.getStreamPosition();
 		writer.writeInt32(score.waypoints.size());
 		for (const auto& waypoint : score.waypoints)
 		{

@@ -51,6 +51,7 @@ namespace MikuMikuWorld::Engine
 		GuideColor color; // 霑ｽ蜉: 繧ｬ繧､繝臥ｷ壹・濶ｲ
 		bool dummy;       // 霑ｽ蜉
 		int layer;        // 霑ｽ蜉
+		HoldStepLayer stepLayer{ HoldStepLayer::Top };
 
 		ptrdiff_t tailStepIndex;
 		double headTime, tailTime;
@@ -86,6 +87,7 @@ namespace MikuMikuWorld::Engine
 		std::vector<DrawingHoldSegment> drawingHoldSegments;
 
 		std::vector<LayerHiSpeedCache> hsCache;
+		std::vector<float> layerForceNoteSpeeds;
 
 		Effect::EffectView effectView;
 

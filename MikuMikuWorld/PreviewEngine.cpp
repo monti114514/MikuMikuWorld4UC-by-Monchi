@@ -6,7 +6,7 @@
 
 namespace MikuMikuWorld
 {
-	SpriteTransform::SpriteTransform(float v[64]) : xx(v), xy(nullptr), yx(nullptr), yy(v + 48) 
+	SpriteTransform::SpriteTransform(float v[64]) : xx(v), xy(nullptr), yx(nullptr), yy(v + 48)
 	{
 		DirectX::XMMATRIX tmp(v + 16);
 		if (!DirectX::XMMatrixIsNull(tmp))
@@ -37,6 +37,7 @@ namespace MikuMikuWorld::Engine
 	// ハイスピード対応の心臓部（レイヤー対応・NextRUSH+互換版）
 	double accumulateScaledDuration(int tick, int beatTicks, const std::vector<Tempo>& tempos, const std::unordered_map<id_t, HiSpeedChange>& hiSpeeds, int layer)
 	{
+
 		// 1. unordered_mapからvectorに変換し、指定されたlayerに一致するハイスピードのみを抽出する
 		std::vector<HiSpeedChange> hsList;
 		hsList.reserve(hiSpeeds.size());
@@ -48,7 +49,9 @@ namespace MikuMikuWorld::Engine
 
 		// そのレイヤーにハイスピード変化が一つもなければ、BPMのみの通常計算を返す
 		if (hsList.empty())
+		{
 			return accumulateDuration(tick, beatTicks, tempos);
+		}
 
 		std::stable_sort(hsList.begin(), hsList.end(), [](const HiSpeedChange& a, const HiSpeedChange& b) {
 			return a.tick < b.tick;
@@ -88,66 +91,60 @@ namespace MikuMikuWorld::Engine
 			return accumulateDuration(t, beatTicks, tempos);
 		};
 
-		// 3. 境界から境界へ、区間ごとに積分計算を進める
+		// 3. Accumulate each segment between boundaries.
 		for (int nextTick : boundaries)
 		{
-			// NextRUSH+移植: Skip（ワープ）の処理
-			// currentTick に到達した瞬間に、そのTickにあるHSのSkip値を加算する
-			while (hsIdx + 1 < (int)hsList.size() && hsList[hsIdx + 1].tick == currentTick)
+			if (nextTick != currentTick)
 			{
-				hsIdx++;
-				if (hsList[hsIdx].skips != 0.0f)
+				double nextTime = getTimeAt(nextTick);
+				double deltaTime = nextTime - currentTime;
+				double avgSpeed = 1.0;
+
+				if (hsIdx >= 0)
 				{
-					double bpm = getBpmAt(hsList[hsIdx].tick);
-					// Skipの単位(Beat)を時間(秒)に変換して直接加算（ワープ）
-					scaledDuration += hsList[hsIdx].skips * (60.0 / bpm);
-				}
-			}
+					const auto& currentHs = hsList[hsIdx];
 
-			if (nextTick == currentTick) continue;
-
-			double nextTime = getTimeAt(nextTick);
-			double deltaTime = nextTime - currentTime;
-			double avgSpeed = 1.0;
-
-			if (hsIdx >= 0)
-			{
-				const auto& currentHs = hsList[hsIdx];
-				
-				// NextRUSH+移植: Linear（直線補間）の処理
-				// 次のHSが存在し、かつEaseがLinearの場合のみ台形積分を行う
-				if (currentHs.ease == HiSpeedEaseType::Linear && hsIdx + 1 < (int)hsList.size())
-				{
-					double currentHsTime = getTimeAt(currentHs.tick);
-					double nextHsTime = getTimeAt(hsList[hsIdx + 1].tick);
-					double timeDiff = nextHsTime - currentHsTime;
-
-					if (timeDiff > 1e-6)
+					if (currentHs.ease == HiSpeedEaseType::Linear && hsIdx + 1 < (int)hsList.size())
 					{
-						// 物理時間(秒)ベースで、現在の速度と次の速度を線形補間して中間速度を算出
-						double speedAtCurrent = currentHs.speed + (hsList[hsIdx + 1].speed - currentHs.speed) * ((currentTime - currentHsTime) / timeDiff);
-						double speedAtNext = currentHs.speed + (hsList[hsIdx + 1].speed - currentHs.speed) * ((nextTime - currentHsTime) / timeDiff);
-						
-						// 台形の面積の公式（(上底＋下底)÷2）により、この区間の平均速度を求める
-						avgSpeed = (speedAtCurrent + speedAtNext) / 2.0;
+						double currentHsTime = getTimeAt(currentHs.tick);
+						double nextHsTime = getTimeAt(hsList[hsIdx + 1].tick);
+						double timeDiff = nextHsTime - currentHsTime;
+
+						if (timeDiff > 1e-6)
+						{
+							double speedAtCurrent = currentHs.speed + (hsList[hsIdx + 1].speed - currentHs.speed) * ((currentTime - currentHsTime) / timeDiff);
+							double speedAtNext = currentHs.speed + (hsList[hsIdx + 1].speed - currentHs.speed) * ((nextTime - currentHsTime) / timeDiff);
+							avgSpeed = (speedAtCurrent + speedAtNext) / 2.0;
+						}
+						else
+						{
+							avgSpeed = currentHs.speed;
+						}
 					}
 					else
 					{
 						avgSpeed = currentHs.speed;
 					}
 				}
-				else
-				{
-					// None（一定速度）、または次のHSが無い場合は開始時の速度を維持
-					avgSpeed = currentHs.speed;
-				}
+
+				scaledDuration += deltaTime * avgSpeed;
+				currentTick = nextTick;
+				currentTime = nextTime;
 			}
 
-			// 仮想時間(Scaled Time)を進める：(物理経過時間) * (その区間の平均速度)
-			scaledDuration += deltaTime * avgSpeed;
-
-			currentTick = nextTick;
-			currentTime = nextTime;
+			// NextRUSH+ semantics: #TIMESCALE_SKIP jumps scaled time at the exact
+			// #TIMESCALE_CHANGE boundary. It changes visual scroll distance only;
+			// note ticks and judgment timing stay unchanged.
+			while (hsIdx + 1 < (int)hsList.size() && hsList[hsIdx + 1].tick == currentTick)
+			{
+				hsIdx++;
+				if (hsList[hsIdx].skips != 0.0f)
+				{
+					double bpm = getBpmAt(hsList[hsIdx].tick);
+					if (bpm != 0.0)
+						scaledDuration += hsList[hsIdx].skips * (60.0 / bpm);
+				}
+			}
 		}
 
 		return scaledDuration;
@@ -156,8 +153,9 @@ namespace MikuMikuWorld::Engine
 	Range getNoteVisualTime(Note const& note, Score const& score, float noteSpeed)
 	{
 		//  事前計算時に、そのノーツが所属するレイヤーのハイスピードを適用する
-		double targetTime = accumulateScaledDuration(note.tick, TICKS_PER_BEAT, score.tempoChanges, score.hiSpeedChanges, note.layer);
-		return {targetTime - getNoteDuration(noteSpeed), targetTime};
+		double targetTime = accumulateScaledDuration(note.tick, TICKS_PER_BEAT, score.tempoChanges,
+		                                             score.hiSpeedChanges, note.layer);
+		return {targetTime - getNoteDuration(getLayerEffectiveNoteSpeed(score, note.layer, noteSpeed)), targetTime};
 	}
 
 	std::array<DirectX::XMFLOAT4, 4> quadvPos(float left, float right, float top, float bottom)
@@ -186,7 +184,7 @@ namespace MikuMikuWorld::Engine
 
 	std::array<DirectX::XMFLOAT4, 4> perspectiveQuadvPos(float leftStart, float leftStop, float rightStart, float rightStop, float top, float bottom)
 	{
-		float 
+		float
 			x1 = rightStart * top,   y1 = top,
 			x2 = rightStop * bottom, y2 = bottom,
 			x3 = leftStop * bottom,  y3 = bottom,

@@ -292,3 +292,39 @@ timeline_time_signature, Timeline - Insertar Signatura de Compás
 timeline_hi_speed, Timeline - Insertar Cambio de Hi-speed
 zoom_in, Acercar
 zoom_out, Alejar
+
+# Upstream LevelData fields
+life_point,Life Point
+sound_effect,SFX
+sound_effect_default,Default
+sound_effect_none,None
+sound_effect_tap_perfect,TapPerfect
+sound_effect_flick,Flick
+sound_effect_trace,Trace
+sound_effect_tick,Tick
+sound_effect_crit_tap,CritTap
+sound_effect_crit_flick,CritFlick
+sound_effect_crit_trace,CritTrace
+sound_effect_crit_tick,CritTick
+sound_effect_damage,Damage
+hold_step_layer,Hold Step Layer
+hold_step_layer_top,Top
+hold_step_layer_bottom,Bottom
+hold_step_layer_under,Under
+hold_step_layer_over,Over
+skill_effect,Effect
+skill_effect_score,Score Boost
+skill_effect_heal,Heal
+skill_effect_perfect,Perfect Lock
+skill_level,Level
+skill_effect_score_desc,Increases score gain while active.
+skill_effect_heal_desc,Restores life when activated.
+skill_effect_perfect_desc,Strengthens judgment support while active.
+skill_level_desc,Level 1-4 is exported to Skill.level.
+fever_start_tick,FEVER Start Tick
+fever_end_tick,FEVER End Tick
+layer_force_note_speed_enabled,Force Note Speed
+layer_force_note_speed,Force Note Speed
+insert_skill,Insert Skill
+set_fever_start,Set FEVER Start
+set_fever_end,Set FEVER End
