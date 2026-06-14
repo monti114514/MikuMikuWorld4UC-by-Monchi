@@ -21,6 +21,10 @@ namespace MikuMikuWorld
 		EffectCount
 	};
 
+	constexpr const char* skillEffectTypes[]{
+		"skill_effect_score", "skill_effect_heal", "skill_effect_perfect"
+	};
+
 	struct SkillTrigger
 	{
 		id_t ID;

@@ -26,6 +26,8 @@ namespace MikuMikuWorld
 	// sound effect, hold step layer, and force note speed.
 	const int MCH_MMWS_VERSION = 1;
 	const char* MCH_MMWS_SIGNATURE = "MCHMMWS";
+	const int MCH_LAYER_EXTENSION_VERSION = 1;
+	const char* MCH_LAYER_EXTENSION_SIGNATURE = "MCH_LAYER_EXT";
 
 	enum NoteFlags
 	{
@@ -40,6 +42,14 @@ namespace MikuMikuWorld
 		HOLD_END_HIDDEN = 1 << 1,
 		HOLD_GUIDE = 1 << 2,
 		HOLD_DUMMY = 1 << 3
+	};
+
+	enum LayerFlags
+	{
+		LAYER_HIDDEN = 1 << 0,
+		LAYER_IS_FOLDER = 1 << 1,
+		LAYER_IN_FOLDER = 1 << 2,
+		LAYER_IS_COLLAPSED = 1 << 3
 	};
 
 	struct NativeScoreSerializer::ScoreVersion
@@ -116,6 +126,28 @@ namespace MikuMikuWorld
 			if (value >= static_cast<unsigned int>(SkillEffect::EffectCount))
 				return SkillEffect::Score;
 			return static_cast<SkillEffect>(value);
+		}
+
+		unsigned int toLayerFlags(const Layer& layer)
+		{
+			unsigned int flags = 0;
+			if (layer.hidden)
+				flags |= LAYER_HIDDEN;
+			if (layer.isFolder)
+				flags |= LAYER_IS_FOLDER;
+			if (layer.inFolder)
+				flags |= LAYER_IN_FOLDER;
+			if (layer.isCollapsed)
+				flags |= LAYER_IS_COLLAPSED;
+			return flags;
+		}
+
+		void applyLayerFlags(Layer& layer, unsigned int flags)
+		{
+			layer.hidden = (flags & LAYER_HIDDEN) != 0;
+			layer.isFolder = (flags & LAYER_IS_FOLDER) != 0;
+			layer.inFolder = (flags & LAYER_IN_FOLDER) != 0;
+			layer.isCollapsed = (flags & LAYER_IS_COLLAPSED) != 0;
 		}
 	}
 
@@ -510,6 +542,28 @@ namespace MikuMikuWorld
 					forceNoteSpeed = 0.0f;
 				score.layers.push_back({ name, forceNoteSpeed });
 			}
+
+			if (version.isMonchiNative() && reader.getStreamPosition() < waypointsAddress)
+			{
+				std::string extensionSignature = reader.readString();
+				if (extensionSignature == MCH_LAYER_EXTENSION_SIGNATURE)
+				{
+					int extensionVersion = reader.readUInt32();
+					if (extensionVersion <= MCH_LAYER_EXTENSION_VERSION)
+					{
+						int extensionLayerCount = reader.readUInt32();
+						for (int i = 0; i < extensionLayerCount &&
+						                reader.getStreamPosition() + sizeof(uint32_t) <=
+						                    waypointsAddress;
+						     ++i)
+						{
+							unsigned int flags = reader.readUInt32();
+							if (i < score.layers.size())
+								applyLayerFlags(score.layers[i], flags);
+						}
+					}
+				}
+			}
 		}
 
 		if (version.supportWaypoints())
@@ -644,6 +698,15 @@ namespace MikuMikuWorld
 		}
 
 		uint32_t waypointsAddress = writer.getStreamPosition();
+		writer.writeString(MCH_LAYER_EXTENSION_SIGNATURE);
+		writer.writeInt32(MCH_LAYER_EXTENSION_VERSION);
+		writer.writeInt32(score.layers.size());
+		for (const auto& layer : score.layers)
+		{
+			writer.writeInt32(toLayerFlags(layer));
+		}
+
+		waypointsAddress = writer.getStreamPosition();
 		writer.writeInt32(score.waypoints.size());
 		for (const auto& waypoint : score.waypoints)
 		{

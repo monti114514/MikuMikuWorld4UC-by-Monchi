@@ -44,6 +44,13 @@ namespace MikuMikuWorld
 		SoundEffectTypeCount
 	};
 
+	constexpr const char* soundEffectTypes[]{
+		"sound_effect_default", "sound_effect_none",       "sound_effect_tap_perfect",
+		"sound_effect_flick",   "sound_effect_trace",      "sound_effect_tick",
+		"sound_effect_crit_tap", "sound_effect_crit_flick", "sound_effect_crit_trace",
+		"sound_effect_crit_tick", "sound_effect_damage"
+	};
+
 	enum class HoldStepType : uint8_t
 	{
 		Normal,
@@ -93,6 +100,8 @@ namespace MikuMikuWorld
 		Bottom,
 		LayerCount
 	};
+
+	constexpr const char* holdStepLayers[]{ "hold_step_layer_top", "hold_step_layer_bottom" };
 
 	enum class GuideColor : uint8_t
 	{

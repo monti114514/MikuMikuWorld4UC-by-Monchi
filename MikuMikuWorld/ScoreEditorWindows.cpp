@@ -41,6 +41,8 @@ namespace MikuMikuWorld
 
 			UI::addIntProperty(getString("lane_extension"), context.workingData.laneExtension, 0,
 			                   100);
+			UI::addIntProperty(getString("life_point"), context.workingData.baseLifePoint, 10,
+			                   999999);
 			UI::endPropertyColumns();
 		}
 
@@ -446,6 +448,16 @@ namespace MikuMikuWorld
 				}
 			}
 
+			if (UI::addSelectProperty(getString("sound_effect"), note.soundEffect,
+			                          soundEffectTypes, arrayLength(soundEffectTypes)))
+			{
+				for (auto& id : context.selectedNotes)
+				{
+					context.score.notes.at(id).soundEffect = note.soundEffect;
+				}
+				edited = true;
+			}
+
 			UI::endPropertyColumns();
 			if (context.hasHoldInSelection())
 			{
@@ -475,6 +487,8 @@ namespace MikuMikuWorld
 						Note easeableNote;
 						bool hasStepType = false;
 						Note stepTypeNote;
+						bool hasStepLayer = false;
+						Note stepLayerNote;
 						for (auto id : context.selectedNotes)
 						{
 							auto& n = context.score.notes.at(id);
@@ -493,6 +507,14 @@ namespace MikuMikuWorld
 									stepTypeNote = n;
 								}
 								hasStepType = true;
+							}
+							if (n.getType() == NoteType::Hold || n.getType() == NoteType::HoldMid)
+							{
+								if (!hasStepLayer)
+								{
+									stepLayerNote = n;
+								}
+								hasStepLayer = true;
 							}
 						}
 
@@ -541,6 +563,45 @@ namespace MikuMikuWorld
 										step.type = stepType;
 									}
 								}
+							}
+						}
+
+						if (hasStepLayer)
+						{
+							HoldStepLayer stepLayer = HoldStepLayer::Top;
+							if (stepLayerNote.getType() == NoteType::Hold)
+							{
+								stepLayer = hold.start.layer;
+							}
+							else
+							{
+								int stepIndex = findHoldStep(hold, stepLayerNote.ID);
+								if (stepIndex != -1)
+								{
+									stepLayer = hold.steps.at(stepIndex).layer;
+								}
+							}
+
+							if (UI::addSelectProperty(getString("hold_step_layer"), stepLayer,
+							                          holdStepLayers, arrayLength(holdStepLayers)))
+							{
+								for (auto id : context.selectedNotes)
+								{
+									auto& note = context.score.notes.at(id);
+									if (note.getType() == NoteType::Hold)
+									{
+										hold.start.layer = stepLayer;
+									}
+									else if (note.getType() == NoteType::HoldMid)
+									{
+										int localStepIndex = findHoldStep(hold, note.ID);
+										if (localStepIndex != -1)
+										{
+											hold.steps.at(localStepIndex).layer = stepLayer;
+										}
+									}
+								}
+								edited = true;
 							}
 						}
 
@@ -1822,6 +1883,34 @@ namespace MikuMikuWorld
 			ImGui::PopStyleVar();
 			ImGui::Separator();
 			// =====================================================================
+
+			if (context.selectedLayer >= 0 && context.selectedLayer < context.score.layers.size() &&
+			    !context.score.layers[context.selectedLayer].isFolder)
+			{
+				Layer& selectedLayer = context.score.layers[context.selectedLayer];
+				bool forceNoteSpeedEnabled = selectedLayer.forceNoteSpeed >= 1.0f &&
+				                             selectedLayer.forceNoteSpeed <= 12.0f;
+				float forceNoteSpeed = forceNoteSpeedEnabled ? selectedLayer.forceNoteSpeed : 6.0f;
+				bool forceNoteSpeedEdited = false;
+
+				UI::beginPropertyColumns();
+				forceNoteSpeedEdited |= UI::addCheckboxProperty(
+				    getString("layer_force_note_speed_enabled"), forceNoteSpeedEnabled);
+				if (forceNoteSpeedEnabled)
+				{
+					forceNoteSpeedEdited |= UI::addFloatProperty(
+					    getString("layer_force_note_speed"), forceNoteSpeed, "%.2fx", 1.0f, 12.0f);
+				}
+				UI::endPropertyColumns();
+
+				if (forceNoteSpeedEdited)
+				{
+					Score prev = context.score;
+					selectedLayer.forceNoteSpeed = forceNoteSpeedEnabled ? forceNoteSpeed : 0.0f;
+					context.pushHistory("Change layer force note speed", prev, context.score);
+				}
+				ImGui::Separator();
+			}
 
 			float windowHeight = ImGui::GetContentRegionAvail().y - ImGui::GetStyle().WindowPadding.y;
 

@@ -254,6 +254,12 @@ namespace MikuMikuWorld
 			HiSpeedEaseType editHiSpeedEase = HiSpeedEaseType::None;
 			bool editHiSpeedHideNote = false;
 
+			SkillEffect editSkillEffect = SkillEffect::Score;
+			int editSkillLevel = 1;
+
+			int editFeverStartTick = -1;
+			int editFeverEndTick = -1;
+
 			std::string editName = "";
 		} eventEdit{};
 

@@ -9,6 +9,7 @@
 #include "UI.h"
 #include "Utilities.h"
 #include <algorithm>
+#include <climits>
 #include <string>
 
 namespace MikuMikuWorld
@@ -807,11 +808,27 @@ namespace MikuMikuWorld
 			drawList->AddTriangleFilled({ x, y2 }, { x + 10, y2 }, { x + 10, y2 + 10 }, 0xFFCCCCCC);
 		}
 
-		feverControl(context, context.score.fever);
+		if (feverControl(context, context.score.fever))
+		{
+			eventEdit.editId = 0;
+			eventEdit.editFeverStartTick = context.score.fever.startTick;
+			eventEdit.editFeverEndTick = context.score.fever.endTick;
+			eventEdit.type = EventType::Fever;
+			ImGui::OpenPopup("edit_event");
+		}
 
 		// Update skill triggers
-		for (const auto& [_, skill] : context.score.skills)
-			skillControl(context, skill);
+		for (const auto& [id, skill] : context.score.skills)
+		{
+			if (skillControl(context, skill))
+			{
+				eventEdit.editId = id;
+				eventEdit.editSkillEffect = skill.effect;
+				eventEdit.editSkillLevel = skill.level;
+				eventEdit.type = EventType::Skill;
+				ImGui::OpenPopup("edit_event");
+			}
+		}
 
 		eventEditor(context);
 		updateNotes(context, edit, renderer);
@@ -2820,6 +2837,79 @@ namespace MikuMikuWorld
 						context.score.hiSpeedChanges.erase(eventEdit.editId);
 						context.pushHistory("Remove hi-speed change", prev, context.score);
 					}
+				}
+			}
+			else if (eventEdit.type == EventType::Skill)
+			{
+				if (context.score.skills.find(eventEdit.editId) == context.score.skills.end())
+				{
+					ImGui::CloseCurrentPopup();
+					ImGui::EndPopup();
+					return;
+				}
+
+				bool eventEdited = false;
+				UI::beginPropertyColumns();
+				if (ImGui::IsWindowAppearing())
+					ImGui::SetColumnWidth(0, minimumColumnWidth);
+				eventEdited |= UI::addSelectProperty(fitColumn(getString("skill_effect")),
+				                                     eventEdit.editSkillEffect, skillEffectTypes,
+				                                     arrayLength(skillEffectTypes));
+				eventEdited |= UI::addIntProperty(fitColumn(getString("skill_level")),
+				                                  eventEdit.editSkillLevel, "Lv.%d", 1, 4);
+				UI::endPropertyColumns();
+
+				SkillTrigger& skill = context.score.skills[eventEdit.editId];
+				if (eventEdited)
+				{
+					Score prev = context.score;
+					skill.effect = eventEdit.editSkillEffect;
+					skill.level = static_cast<uint8_t>(std::clamp(eventEdit.editSkillLevel, 1, 4));
+					context.pushHistory("Change skill trigger", prev, context.score);
+				}
+
+				ImGui::Separator();
+				if (ImGui::Button(getString("remove"), ImVec2(-1, UI::btnSmall.y + 2)))
+				{
+					ImGui::CloseCurrentPopup();
+					Score prev = context.score;
+					context.score.skills.erase(eventEdit.editId);
+					context.pushHistory("Remove skill trigger", prev, context.score);
+				}
+			}
+			else if (eventEdit.type == EventType::Fever)
+			{
+				bool eventEdited = false;
+				UI::beginPropertyColumns();
+				if (ImGui::IsWindowAppearing())
+					ImGui::SetColumnWidth(0, minimumColumnWidth);
+				eventEdited |= UI::addIntProperty(fitColumn(getString("fever_start_tick")),
+				                                  eventEdit.editFeverStartTick, -1, INT_MAX);
+				eventEdited |= UI::addIntProperty(fitColumn(getString("fever_end_tick")),
+				                                  eventEdit.editFeverEndTick, -1, INT_MAX);
+				UI::endPropertyColumns();
+
+				if (eventEdited)
+				{
+					Score prev = context.score;
+					if (eventEdit.editFeverStartTick >= 0 && eventEdit.editFeverEndTick >= 0 &&
+					    eventEdit.editFeverEndTick < eventEdit.editFeverStartTick)
+					{
+						eventEdit.editFeverEndTick = eventEdit.editFeverStartTick;
+					}
+					context.score.fever.startTick = eventEdit.editFeverStartTick;
+					context.score.fever.endTick = eventEdit.editFeverEndTick;
+					context.pushHistory("Change FEVER event", prev, context.score);
+				}
+
+				ImGui::Separator();
+				if (ImGui::Button(getString("remove"), ImVec2(-1, UI::btnSmall.y + 2)))
+				{
+					ImGui::CloseCurrentPopup();
+					Score prev = context.score;
+					context.score.fever.startTick = -1;
+					context.score.fever.endTick = -1;
+					context.pushHistory("Remove FEVER event", prev, context.score);
 				}
 			}
 			else if (eventEdit.type == EventType::Waypoint)
