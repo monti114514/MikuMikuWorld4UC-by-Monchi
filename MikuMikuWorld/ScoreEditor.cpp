@@ -8,15 +8,19 @@
 #include "Audio/Sound.h"
 #include "Constants.h"
 #include "File.h"
+#include "IO.h"
 #include "Rendering/Texture.h"
 #include "SUS.h"
 #include "NativeScoreSerializer.h"
 #include "UI.h"
 #include "Utilities.h"
 #include "PreviewEngine.h"
+#include <algorithm>
+#include <array>
+#include <cctype>
 #include <iomanip>
 #include <Windows.h>
-#include <shobjidl.h> // フォルダ選択ダイアログを使用するために追加
+#include <shobjidl.h>
 #include <filesystem>
 #include <fstream>
 
@@ -38,6 +42,108 @@ namespace MikuMikuWorld
 		                                          "down", "down_left", "down_right" };
 
 	constexpr const char* toolbarStepNames[] = { "normal", "hidden", "skip" };
+
+	constexpr const char* UPDATE_API_HOST = "https://api.github.com";
+	constexpr const char* UPDATE_API_PATH = "/repos/monti114514/MikuMikuWorld4UC-by-Monchi/releases/latest";
+	constexpr bool INCLUDE_PRERELEASE_UPDATES = false;
+
+	struct ParsedVersion
+	{
+		std::array<int, 4> parts{};
+		bool prerelease{};
+		bool valid{};
+		std::string normalized;
+	};
+
+	std::string trimVersionTag(std::string tag)
+	{
+		tag.erase(tag.begin(),
+		          std::find_if(tag.begin(), tag.end(), [](unsigned char c)
+		          { return !std::isspace(c); }));
+		tag.erase(std::find_if(tag.rbegin(), tag.rend(), [](unsigned char c)
+		          { return !std::isspace(c); }).base(),
+		          tag.end());
+
+		return tag;
+	}
+
+	std::string formatVersion(const std::array<int, 4>& parts)
+	{
+		std::string version = IO::formatString("%d.%d.%d", parts[0], parts[1], parts[2]);
+		if (parts[3] != 0)
+			version += IO::formatString(".%d", parts[3]);
+
+		return version;
+	}
+
+	ParsedVersion parseVersionTag(std::string tag)
+	{
+		ParsedVersion version{};
+		tag = trimVersionTag(tag);
+
+		if (!tag.empty() && (tag[0] == 'v' || tag[0] == 'V'))
+			tag.erase(tag.begin());
+
+		const size_t metadataStart = tag.find('+');
+		if (metadataStart != std::string::npos)
+			tag.erase(metadataStart);
+
+		const size_t prereleaseStart = tag.find('-');
+		if (prereleaseStart != std::string::npos)
+		{
+			version.prerelease = true;
+			tag.erase(prereleaseStart);
+		}
+
+		auto split = Utilities::splitString(tag, '.');
+		if (split.size() != 3 && split.size() != 4)
+			return version;
+
+		for (size_t i = 0; i < split.size(); ++i)
+		{
+			const std::string& part = split[i];
+			if (part.empty() || !std::all_of(part.begin(), part.end(), [](unsigned char c)
+			    { return std::isdigit(c); }))
+				return version;
+
+			try
+			{
+				version.parts[i] = std::stoi(part);
+			}
+			catch (...)
+			{
+				return version;
+			}
+		}
+
+		version.valid = true;
+		version.normalized = formatVersion(version.parts);
+		return version;
+	}
+
+	bool isNewerVersion(const std::string& latestVersionString,
+	                    const std::string& currentVersionString,
+	                    bool includePrerelease = INCLUDE_PRERELEASE_UPDATES)
+	{
+		const ParsedVersion latestVersion = parseVersionTag(latestVersionString);
+		const ParsedVersion currentVersion = parseVersionTag(currentVersionString);
+		if (!latestVersion.valid || !currentVersion.valid)
+			return false;
+		if (latestVersion.prerelease && !includePrerelease)
+			return false;
+
+		for (size_t i = 0; i < latestVersion.parts.size(); ++i)
+		{
+			if (latestVersion.parts[i] > currentVersion.parts[i])
+				return true;
+
+			if (latestVersion.parts[i] < currentVersion.parts[i])
+				return false;
+		}
+
+		return false;
+	}
+
 
 	ScoreEditor::ScoreEditor()
 	{
@@ -75,77 +181,79 @@ namespace MikuMikuWorld
 
 	void ScoreEditor::fetchUpdate()
 	{
-		std::wstring updateFlagPath =
-		    IO::mbToWideStr(Application::getAppDir() + "latest_version.txt");
-		bool shouldFetchUpdate = true;
-		std::string latestVersionString;
-		if (IO::File::exists(updateFlagPath))
+		httplib::Client client(UPDATE_API_HOST);
+
+		std::cout << "Fetching latest update information" << std::endl;
+
+		auto res = client.Get(UPDATE_API_PATH);
+		if (!res)
 		{
-			auto file = IO::File(updateFlagPath, IO::FileMode::Read);
-			using fs_time_t = std::filesystem::file_time_type;
-			auto lastWriteTime = std::filesystem::last_write_time(updateFlagPath);
-			auto now = fs_time_t::clock::now();
-			auto diff =
-			    std::chrono::duration_cast<std::chrono::minutes>(now - lastWriteTime).count();
-			std::cout << "Last update check: " << diff << " minutes ago" << std::endl;
-			if (diff < 60)
-			{
-				std::ifstream file(updateFlagPath);
-				std::getline(file, latestVersionString);
-				file.close();
-				std::cout << "Loading cached latest version" << std::endl;
-				shouldFetchUpdate = false;
-			}
+			std::cerr << "Failed to fetch latest update: client.Get failed" << std::endl;
+			return;
 		}
-		if (shouldFetchUpdate)
+
+		std::cout << "Status: " << res->status << std::endl;
+
+		if (res->status != 200)
 		{
+			std::cerr << "Failed to fetch latest update: HTTP " << res->status << std::endl;
+			return;
+		}
 
-			httplib::Client client("https://api.github.com");
+		ParsedVersion latestVersion;
 
-			std::cout << "Fetching new update" << std::endl;
-			auto res = client.Get("/repos/UntitledCharts/MikuMikuWorld4UC/releases/latest");
-			if (!res)
+		try
+		{
+			auto parsed = nlohmann::json::parse(res->body);
+
+			if (!parsed.contains("tag_name") || !parsed["tag_name"].is_string())
 			{
-				std::cerr << "Failed to fetch latest update: client.Get failed" << std::endl;
+				std::cerr << "Failed to fetch latest update: tag_name not found" << std::endl;
 				return;
 			}
-			std::cout << "Status: " << res->status << std::endl;
-			if (res->status == 200)
+
+			const bool isPrerelease =
+			    parsed.contains("prerelease") && parsed["prerelease"].is_boolean() &&
+			    parsed["prerelease"].get<bool>();
+			if (isPrerelease && !INCLUDE_PRERELEASE_UPDATES)
 			{
-				auto parsed = nlohmann::json::parse(res->body);
-				std::string tagName = parsed["tag_name"];
-				latestVersionString = tagName.substr(1);
+				std::cout << "Latest release is a prerelease; skipping update notification"
+				          << std::endl;
+				return;
 			}
 
-			auto file = IO::File(updateFlagPath, IO::FileMode::Write);
-			file.write(latestVersionString);
-			file.flush();
-			file.close();
+			latestVersion = parseVersionTag(parsed["tag_name"].get<std::string>());
+			if (!latestVersion.valid)
+			{
+				std::cerr << "Failed to fetch latest update: invalid tag_name" << std::endl;
+				return;
+			}
+
+			if (latestVersion.prerelease && !INCLUDE_PRERELEASE_UPDATES)
+			{
+				std::cout << "Latest release tag is a prerelease; skipping update notification"
+				          << std::endl;
+				return;
+			}
 		}
-
-		auto currentVersion = Utilities::splitString(Application::getAppVersion(), '.');
-		auto latestVersion = Utilities::splitString(latestVersionString, '.');
-
-		if (currentVersion.size() != latestVersion.size())
+		catch (const std::exception& e)
 		{
-			std::cout << "Assertion failed: number of version part don't match" << std::endl;
+			std::cerr << "Failed to parse latest update response: " << e.what() << std::endl;
+			return;
 		}
 
-		std::cout << "Current version: " << Application::getAppVersion() << std::endl;
+		const std::string currentVersionString = Application::getAppVersion();
+		const std::string latestVersionString = latestVersion.normalized;
+
+		std::cout << "Current version: " << currentVersionString << std::endl;
 		std::cout << "Latest version: " << latestVersionString << std::endl;
 
-		for (int i = 0; i < currentVersion.size(); i++)
+		if (isNewerVersion(latestVersionString, currentVersionString))
 		{
-			auto currentVersionPart = std::stoi(currentVersion[i]);
-			auto latestVersionPart = std::stoi(latestVersion[i]);
-
-			if (latestVersionPart > currentVersionPart)
-			{
-				std::cout << "Update available" << std::endl;
-				updateAvailableDialog.latestVersion = latestVersionString;
-				updateAvailableDialog.open = true;
-				return;
-			}
+			std::cout << "Update available" << std::endl;
+			updateAvailableDialog.latestVersion = latestVersionString;
+			updateAvailableDialog.open = true;
+			return;
 		}
 
 		std::cout << "No update" << std::endl;
@@ -384,15 +492,31 @@ namespace MikuMikuWorld
 
 	size_t ScoreEditor::updateRecentFilesList(const std::string& entry)
 	{
-		while (config.recentFiles.size() >= maxRecentFilesEntries)
-			config.recentFiles.pop_back();
+		std::string normalizedEntry = entry;
+		std::replace(normalizedEntry.begin(), normalizedEntry.end(), '\\', '/');
+		std::transform(normalizedEntry.begin(), normalizedEntry.end(), normalizedEntry.begin(),
+		               [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
 
-		// Remove the entry (if found) to the beginning of the vector
+		const size_t filenamePos = normalizedEntry.find_last_of('/');
+		const std::string filename =
+		    filenamePos == std::string::npos ? normalizedEntry : normalizedEntry.substr(filenamePos + 1);
+
+		if (normalizedEntry.find("/auto_save/") != std::string::npos ||
+		    filename.rfind("auto_save_", 0) == 0)
+		{
+			return config.recentFiles.size();
+		}
+
+		// Remove the entry if it already exists.
 		auto it = std::find(config.recentFiles.begin(), config.recentFiles.end(), entry);
 		if (it != config.recentFiles.end())
 			config.recentFiles.erase(it);
 
 		config.recentFiles.insert(config.recentFiles.begin(), entry);
+
+		while (config.recentFiles.size() > maxRecentFilesEntries)
+			config.recentFiles.pop_back();
+
 		return config.recentFiles.size();
 	}
 
@@ -409,12 +533,7 @@ namespace MikuMikuWorld
 		context.waveformL.clear();
 		context.waveformR.clear();
 		context.clearSelection();
-
-		// 追加：描画キャッシュをクリアして古いデータの参照を防ぐ
-		// context.scorePreviewDrawData.drawingNotes.clear();
-
-		// New score; nothing to save
-		context.upToDate = true;
+		context.upToDate = true;  // New score; nothing to save
 
 		UI::setWindowTitle(windowUntitled);
 	}
@@ -839,7 +958,7 @@ namespace MikuMikuWorld
 
 	void ScoreEditor::help()
 	{
-		ShellExecuteW(0, 0, L"https://github.com/crash5band/MikuMikuWorld/wiki", 0, 0, SW_SHOW);
+		ShellExecuteW(0, 0, L"https://sekai-guide.tootiejin.com/getting-started/usage-guide-mmw4cc", 0, 0, SW_SHOW);
 	}
 
 	void ScoreEditor::autoSave()
@@ -851,7 +970,7 @@ namespace MikuMikuWorld
 			std::filesystem::create_directory(wAutoSaveDir);
 
 		context.score.metadata = context.workingData.toScoreMetadata();
-		NativeScoreSerializer().serialize(context.score, autoSavePath + "\\mmw_auto_save_" +
+		NativeScoreSerializer().serialize(context.score, autoSavePath + "\\auto_save_" +
 		                                                     Utilities::getCurrentDateTime() +
 		                                                     UC_MMWS_EXTENSION);
 
@@ -882,7 +1001,7 @@ namespace MikuMikuWorld
 		{
 			std::string extension = file.path().extension().string();
 			std::transform(extension.begin(), extension.end(), extension.begin(), ::tolower);
-			if (extension == MMWS_EXTENSION)
+			if (extension == UC_MMWS_EXTENSION)
 				deleteFiles.push_back(file);
 		}
 
@@ -904,7 +1023,6 @@ namespace MikuMikuWorld
 		return deleteCount;
 	}
 
-// ＝＝＝ ここから追加：3D直線化アルゴリズム ＝＝＝
 	void ScoreEditor::straightenHold3D()
 	{
 		if (!context.hasSelection()) return;
@@ -914,7 +1032,6 @@ namespace MikuMikuWorld
 		bool changed = false;
 		std::unordered_set<int> selected = context.selectedNotes;
 
-		// 【修正1】既存のノーツから最大のIDを探し出し、安全な新しいIDを用意する
 		int nextNoteID = 1;
 		for (const auto& pair : context.score.notes)
 		{
@@ -926,7 +1043,6 @@ namespace MikuMikuWorld
 			if (context.score.notes.find(id) == context.score.notes.end()) continue;
 			Note& note = context.score.notes.at(id);
 
-			// Holdの始点ノーツかどうかを判定
 			if (note.getType() == NoteType::Hold && context.score.holdNotes.find(id) != context.score.holdNotes.end())
 			{
 				HoldNote& hold = context.score.holdNotes.at(id);
@@ -937,7 +1053,6 @@ namespace MikuMikuWorld
 				int tickEnd = endNote.tick;
 				if (tickStart >= tickEnd) continue;
 
-				// 既存の中継点を削除
 				for (const auto& step : hold.steps)
 				{
 					context.score.notes.erase(step.ID);
@@ -953,16 +1068,13 @@ namespace MikuMikuWorld
 				    tickEnd, TICKS_PER_BEAT, context.score.tempoChanges,
 				    context.score.hiSpeedChanges, endNote.layer,
 				    Engine::getLayerForceNoteSpeed(context.score, endNote.layer));
-				
+
 				float noteDuration = Engine::getNoteDuration(config.pvNoteSpeed);
-				
-				// 終点のY座標進行度を計算（始点を Y=1.0 とした相対値）
+
 				double y1 = std::pow(1.06, 45.0 * (stm0 - stm1) / noteDuration);
-				
-				// ゼロ除算防止（すでにパースの影響を受けない垂直な線の場合はスキップ）
+
 				if (std::abs(1.0 / y1 - 1.0) < 1e-6) continue;
 
-				// 左端(Lane)と右端(Lane+Width)の逆算方程式の定数 A, B を求める
 				double laneStart = note.lane;
 				double laneEnd = endNote.lane;
 				double rightStart = note.lane + note.width;
@@ -974,11 +1086,10 @@ namespace MikuMikuWorld
 				double BRight = (rightEnd - rightStart) / (1.0 / y1 - 1.0);
 				double ARight = rightStart - BRight;
 
-				// 【修正2】現在選択中のクオンタイズ（Division）から、打つ間隔（Tick）を自動計算する
 				int division = timeline.getDivision();
-				// 0除算防止の安全対策を入れた上で、MMWの標準計算式を適用
+
 				int resolution = (division > 0) ? (int)(TICKS_PER_BEAT / (division / 4.0f)) : 120;
-				if (resolution < 10) resolution = 10; // 細かすぎると重くなるため、念のための下限ストッパー
+				if (resolution < 10) resolution = 10;
 
 				for (int t = tickStart + resolution; t < tickEnd; t += resolution)
 				{
@@ -992,23 +1103,20 @@ namespace MikuMikuWorld
 					float right_mid = (float)(ARight + BRight / y_mid);
 					float width_mid = right_mid - lane_mid;
 
-					// 新しい中継点(Note)を生成
 					Note stepNote(NoteType::HoldMid);
 					stepNote.tick = t;
 					stepNote.lane = lane_mid;
-					stepNote.width = std::max(0.1f, width_mid); // 幅がマイナスになるのを防ぐ
+					stepNote.width = std::max(0.1f, width_mid);
 					stepNote.parentID = hold.start.ID;
 					stepNote.layer = note.layer;
-					
-					// 【修正1】安全に計算した新しいIDを付与する
+
 					stepNote.ID = nextNoteID++;
 					
 					context.score.notes[stepNote.ID] = stepNote;
 
-					// HoldStepとして紐付け
 					HoldStep step;
 					step.ID = stepNote.ID;
-					step.type = HoldStepType::Hidden; // 透明な中継点
+					step.type = HoldStepType::Hidden;
 					step.ease = EaseType::Linear;
 					hold.steps.push_back(step);
 				}

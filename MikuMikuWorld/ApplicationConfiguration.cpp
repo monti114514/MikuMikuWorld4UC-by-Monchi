@@ -19,39 +19,45 @@ namespace MikuMikuWorld
 
 	void ApplicationConfiguration::read(const std::string& filename)
 	{
+		restoreDefault();
+		recentFiles.clear();
+
 		std::wstring wFilename = IO::mbToWideStr(filename);
 		if (!std::filesystem::exists(wFilename))
 			return;
 
 		std::ifstream configFile(wFilename);
-		json config;
-		configFile >> config;
+		json configJson;
+		configFile >> configJson;
 		configFile.close();
 
-		version = jsonIO::tryGetValue<std::string>(config, "version", "1.0");
-		language = jsonIO::tryGetValue<std::string>(config, "language", "auto");
-		debugEnabled = jsonIO::tryGetValue<bool>(config, "debug", false);
+		version = jsonIO::tryGetValue<std::string>(configJson, "version", version);
+		language = jsonIO::tryGetValue<std::string>(configJson, "language", language);
+		debugEnabled = jsonIO::tryGetValue<bool>(configJson, "debug", debugEnabled);
 
-		if (jsonIO::keyExists(config, "file"))
+		if (jsonIO::keyExists(configJson, "file"))
 		{
-			minifyOutput = jsonIO::tryGetValue<bool>(config["file"], "minify_output", true);
-			defaultExportFormat = jsonIO::tryGetValue<int>(config["file"], "export_format", -1);
+			minifyOutput =
+			    jsonIO::tryGetValue<bool>(configJson["file"], "minify_output", minifyOutput);
+			defaultExportFormat =
+			    jsonIO::tryGetValue<int>(configJson["file"], "export_format", defaultExportFormat);
 		}
 
-		if (jsonIO::keyExists(config, "window"))
+		if (jsonIO::keyExists(configJson, "window"))
 		{
-			const json& window = config["window"];
-			maximized = jsonIO::tryGetValue<bool>(window, "maximized", false);
-			vsync = jsonIO::tryGetValue<bool>(window, "vsync", true);
-			showFPS = jsonIO::tryGetValue<bool>(window, "show_fps", false);
+			const json& window = configJson["window"];
 
-			windowPos = jsonIO::tryGetValue(window, "position", Vector2{});
+			maximized = jsonIO::tryGetValue<bool>(window, "maximized", maximized);
+			vsync = jsonIO::tryGetValue<bool>(window, "vsync", vsync);
+			showFPS = jsonIO::tryGetValue<bool>(window, "show_fps", showFPS);
+
+			windowPos = jsonIO::tryGetValue(window, "position", windowPos);
 			if (windowPos.x <= 0)
 				windowPos.x = 150;
 			if (windowPos.y <= 0)
 				windowPos.y = 100;
 
-			windowSize = jsonIO::tryGetValue(window, "size", Vector2{});
+			windowSize = jsonIO::tryGetValue(window, "size", windowSize);
 			if (windowSize.x <= 0 || windowSize.y <= 0)
 			{
 				windowSize.x = 1000;
@@ -59,90 +65,124 @@ namespace MikuMikuWorld
 			}
 		}
 
-		if (jsonIO::keyExists(config, "timeline"))
+		if (jsonIO::keyExists(configJson, "timeline"))
 		{
-			timelineWidth = jsonIO::tryGetValue<int>(config["timeline"], "lane_width", 26);
-			notesHeight = jsonIO::tryGetValue<int>(config["timeline"], "notes_height", 26);
-			matchNotesSizeToTimeline =
-			    jsonIO::tryGetValue<bool>(config["timeline"], "match_notes_size_to_timeline", true);
+			timelineWidth =
+			    jsonIO::tryGetValue<int>(configJson["timeline"], "lane_width", timelineWidth);
+			notesHeight =
+			    jsonIO::tryGetValue<int>(configJson["timeline"], "notes_height", notesHeight);
+			matchNotesSizeToTimeline = jsonIO::tryGetValue<bool>(
+			    configJson["timeline"], "match_notes_size_to_timeline", matchNotesSizeToTimeline);
 
-			division = jsonIO::tryGetValue<int>(config["timeline"], "division", 8);
-			zoom = jsonIO::tryGetValue<float>(config["timeline"], "zoom", 2.0f);
-			laneOpacity = jsonIO::tryGetValue<float>(config["timeline"], "lane_opacity", 0.0f);
-			backgroundBrightness =
-			    jsonIO::tryGetValue<float>(config["timeline"], "background_brightness", 0.5f);
-			drawBackground = jsonIO::tryGetValue<bool>(config["timeline"], "draw_background", true);
-			backgroundImage =
-			    jsonIO::tryGetValue<std::string>(config["timeline"], "background_image", "");
+			division =
+			    jsonIO::tryGetValue<int>(configJson["timeline"], "division", division);
+			zoom =
+			    jsonIO::tryGetValue<float>(configJson["timeline"], "zoom", zoom);
+			laneOpacity =
+			    jsonIO::tryGetValue<float>(configJson["timeline"], "lane_opacity", laneOpacity);
+			backgroundBrightness = jsonIO::tryGetValue<float>(
+			    configJson["timeline"], "background_brightness", backgroundBrightness);
+			drawBackground =
+			    jsonIO::tryGetValue<bool>(configJson["timeline"], "draw_background", drawBackground);
+			backgroundImage = jsonIO::tryGetValue<std::string>(
+			    configJson["timeline"], "background_image", backgroundImage);
 
-			useSmoothScrolling =
-			    jsonIO::tryGetValue<bool>(config["timeline"], "smooth_scrolling_enable", true);
-			smoothScrollingTime =
-			    jsonIO::tryGetValue<float>(config["timeline"], "smooth_scrolling_time", 48.0f);
-			scrollSpeedNormal =
-			    jsonIO::tryGetValue<float>(config["timeline"], "scroll_speed_normal", 2.0f);
-			scrollSpeedShift =
-			    jsonIO::tryGetValue<float>(config["timleine"], "scroll_speed_fast", 5.0f);
+			useSmoothScrolling = jsonIO::tryGetValue<bool>(
+			    configJson["timeline"], "smooth_scrolling_enable", useSmoothScrolling);
+			smoothScrollingTime = jsonIO::tryGetValue<float>(
+			    configJson["timeline"], "smooth_scrolling_time", smoothScrollingTime);
+			scrollSpeedNormal = jsonIO::tryGetValue<float>(
+			    configJson["timeline"], "scroll_speed_normal", scrollSpeedNormal);
+			scrollSpeedShift = jsonIO::tryGetValue<float>(
+			    configJson["timeline"], "scroll_speed_fast", scrollSpeedShift);
 
-			drawWaveform = jsonIO::tryGetValue<bool>(config["timeline"], "draw_waveform", true);
+			drawWaveform =
+			    jsonIO::tryGetValue<bool>(configJson["timeline"], "draw_waveform", drawWaveform);
 
-			drawHiSpeedAutomation = jsonIO::tryGetValue<bool>(config["timeline"], "draw_hispeed_automation", true);
-			hiSpeedGraphLimit = jsonIO::tryGetValue<float>(config["timeline"], "hispeed_graph_limit", 5.0f);
-			hiSpeedGraphBgOpacity = jsonIO::tryGetValue<float>(config["timeline"], "hispeed_graph_bg_opacity", 0.59f);
+			drawHiSpeedAutomation = jsonIO::tryGetValue<bool>(
+			    configJson["timeline"], "draw_hispeed_automation", drawHiSpeedAutomation);
+			hiSpeedGraphLimit = jsonIO::tryGetValue<float>(
+			    configJson["timeline"], "hispeed_graph_limit", hiSpeedGraphLimit);
+			hiSpeedGraphBgOpacity = jsonIO::tryGetValue<float>(
+			    configJson["timeline"], "hispeed_graph_bg_opacity", hiSpeedGraphBgOpacity);
 
 			returnToLastSelectedTickOnPause = jsonIO::tryGetValue<bool>(
-			    config["timeline"], "return_to_last_tick_on_pause", false);
-			cursorPositionThreshold =
-			    jsonIO::tryGetValue<float>(config["timeline"], "cursor_position_threshold", 0.5f);
+			    configJson["timeline"], "return_to_last_tick_on_pause",
+			    returnToLastSelectedTickOnPause);
+			cursorPositionThreshold = jsonIO::tryGetValue<float>(
+			    configJson["timeline"], "cursor_position_threshold", cursorPositionThreshold);
 
-			showTickInProperties =
-			    jsonIO::tryGetValue<bool>(config["timeline"], "show_tick_in_properties", true);
+			showTickInProperties = jsonIO::tryGetValue<bool>(
+			    configJson["timeline"], "show_tick_in_properties", showTickInProperties);
 		}
 
-		if (jsonIO::keyExists(config, "preview"))
+		if (jsonIO::keyExists(configJson, "preview"))
 		{
-			pvNoteSpeed = jsonIO::tryGetValue<float>(config["preview"], "note_speed", 8.5f);
-			pvMirrorScore = jsonIO::tryGetValue<bool>(config["preview"], "mirror_score", false);
-			pvDrawToolbar = jsonIO::tryGetValue<bool>(config["preview"], "draw_toolbar", true);
-			pvBackgroundBrightness = jsonIO::tryGetValue<float>(config["preview"], "background_brightness", 0.5f);
-			pvStageOpacity = jsonIO::tryGetValue<float>(config["preview"], "stage_opacity", 0.65f);
-			pvStageCover = jsonIO::tryGetValue<float>(config["preview"], "stage_cover", 0.0f);
-			pvEffectsProfile = jsonIO::tryGetValue<int>(config["preview"], "effects_profile", 0);
-			pvFlickAnimation = jsonIO::tryGetValue<bool>(config["preview"], "flick_animation", true);
-			pvHoldAnimation = jsonIO::tryGetValue<bool>(config["preview"], "hold_animation", true);
-			pvSimultaneousLine = jsonIO::tryGetValue<bool>(config["preview"], "simultaneous_line", true);
-			pvHoldAlpha = jsonIO::tryGetValue<float>(config["preview"], "hold_alpha", 0.6f);
-			pvGuideAlpha = jsonIO::tryGetValue<float>(config["preview"], "guide_alpha", 0.4f);
+			pvNoteSpeed =
+			    jsonIO::tryGetValue<float>(configJson["preview"], "note_speed", pvNoteSpeed);
+			pvMirrorScore =
+			    jsonIO::tryGetValue<bool>(configJson["preview"], "mirror_score", pvMirrorScore);
+			pvDrawToolbar =
+			    jsonIO::tryGetValue<bool>(configJson["preview"], "draw_toolbar", pvDrawToolbar);
+			pvBackgroundBrightness = jsonIO::tryGetValue<float>(
+			    configJson["preview"], "background_brightness", pvBackgroundBrightness);
+			pvStageOpacity =
+			    jsonIO::tryGetValue<float>(configJson["preview"], "stage_opacity", pvStageOpacity);
+			pvStageCover =
+			    jsonIO::tryGetValue<float>(configJson["preview"], "stage_cover", pvStageCover);
+			pvEffectsProfile =
+			    jsonIO::tryGetValue<int>(configJson["preview"], "effects_profile", pvEffectsProfile);
+			pvFlickAnimation =
+			    jsonIO::tryGetValue<bool>(configJson["preview"], "flick_animation", pvFlickAnimation);
+			pvHoldAnimation =
+			    jsonIO::tryGetValue<bool>(configJson["preview"], "hold_animation", pvHoldAnimation);
+			pvSimultaneousLine = jsonIO::tryGetValue<bool>(
+			    configJson["preview"], "simultaneous_line", pvSimultaneousLine);
+			pvHoldAlpha =
+			    jsonIO::tryGetValue<float>(configJson["preview"], "hold_alpha", pvHoldAlpha);
+			pvGuideAlpha =
+			    jsonIO::tryGetValue<float>(configJson["preview"], "guide_alpha", pvGuideAlpha);
 		}
 
-		if (jsonIO::keyExists(config, "theme"))
+		if (jsonIO::keyExists(configJson, "theme"))
 		{
-			accentColor = jsonIO::tryGetValue<int>(config["theme"], "accent_color", 1);
-			userColor = jsonIO::tryGetValue(config["theme"], "user_color", Color{});
-			baseTheme = (BaseTheme)jsonIO::tryGetValue<int>(config["theme"], "base_theme", 0);
+			accentColor =
+			    jsonIO::tryGetValue<int>(configJson["theme"], "accent_color", accentColor);
+			userColor =
+			    jsonIO::tryGetValue(configJson["theme"], "user_color", userColor);
+			baseTheme = (BaseTheme)jsonIO::tryGetValue<int>(
+			    configJson["theme"], "base_theme", static_cast<int>(baseTheme));
 		}
 
-		if (jsonIO::keyExists(config, "save"))
+		if (jsonIO::keyExists(configJson, "save"))
 		{
-			autoSaveEnabled = jsonIO::tryGetValue<bool>(config["save"], "auto_save_enabled", true);
-			autoSaveInterval = jsonIO::tryGetValue<int>(config["save"], "auto_save_interval", 5);
-			autoSaveMaxCount = jsonIO::tryGetValue<int>(config["save"], "auto_save_max_count", 100);
+			autoSaveEnabled = jsonIO::tryGetValue<bool>(
+			    configJson["save"], "auto_save_enabled", autoSaveEnabled);
+			autoSaveInterval = jsonIO::tryGetValue<int>(
+			    configJson["save"], "auto_save_interval", autoSaveInterval);
+			autoSaveMaxCount = jsonIO::tryGetValue<int>(
+			    configJson["save"], "auto_save_max_count", autoSaveMaxCount);
 		}
 
-		if (jsonIO::keyExists(config, "audio"))
+		if (jsonIO::keyExists(configJson, "audio"))
 		{
-			seProfileIndex = jsonIO::tryGetValue<int>(config["audio"], "se_profile", 0);
+			seProfileIndex =
+			    jsonIO::tryGetValue<int>(configJson["audio"], "se_profile", seProfileIndex);
 			masterVolume = std::clamp(
-			    jsonIO::tryGetValue<float>(config["audio"], "master_volume", 1.0f), 0.0f, 1.0f);
-			bgmVolume = std::clamp(jsonIO::tryGetValue<float>(config["audio"], "bgm_volume", 1.0f),
-			                       0.0f, 1.0f);
-			seVolume = std::clamp(jsonIO::tryGetValue<float>(config["audio"], "se_volume", 1.0f),
-			                      0.0f, 1.0f);
+			    jsonIO::tryGetValue<float>(configJson["audio"], "master_volume", masterVolume),
+			    0.0f, 1.0f);
+			bgmVolume = std::clamp(
+			    jsonIO::tryGetValue<float>(configJson["audio"], "bgm_volume", bgmVolume),
+			    0.0f, 1.0f);
+			seVolume = std::clamp(
+			    jsonIO::tryGetValue<float>(configJson["audio"], "se_volume", seVolume),
+			    0.0f, 1.0f);
 		}
 
-		if (jsonIO::keyExists(config, "input") && jsonIO::keyExists(config["input"], "bindings"))
+		if (jsonIO::keyExists(configJson, "input") &&
+		    jsonIO::keyExists(configJson["input"], "bindings"))
 		{
-			for (auto& [key, value] : config["input"]["bindings"].items())
+			for (auto& [key, value] : configJson["input"]["bindings"].items())
 			{
 				for (int i = 0; i < sizeof(bindings) / sizeof(MultiInputBinding*); ++i)
 				{
@@ -158,9 +198,9 @@ namespace MikuMikuWorld
 			}
 		}
 
-		if (jsonIO::arrayHasData(config, "recent_files"))
+		if (jsonIO::arrayHasData(configJson, "recent_files"))
 		{
-			const json& recentFilesJson = config["recent_files"];
+			const json& recentFilesJson = configJson["recent_files"];
 			const size_t count = std::min(recentFilesJson.size(), maxRecentFilesEntries);
 			recentFiles.insert(recentFiles.end(), recentFilesJson.begin(),
 			                   recentFilesJson.begin() + count);
@@ -264,16 +304,22 @@ namespace MikuMikuWorld
 
 	void ApplicationConfiguration::restoreDefault()
 	{
+		version = CONFIG_VERSION;
+
 		windowPos = Vector2(150, 100);
 		windowSize = Vector2(1000, 800);
 		maximized = false;
 		vsync = true;
+		showFPS = false;
+
 		accentColor = 1;
 		userColor = Color(0.2f, 0.2f, 0.2f, 1.0f);
+		baseTheme = static_cast<BaseTheme>(0);
 		language = "auto";
 
 		minifyOutput = true;
 		defaultExportFormat = -1;
+
 		timelineWidth = 26;
 		notesHeight = 26;
 		matchNotesSizeToTimeline = true;
@@ -284,24 +330,37 @@ namespace MikuMikuWorld
 		drawBackground = true;
 		backgroundImage = "";
 		useSmoothScrolling = true;
-		smoothScrollingTime = 48.0f;
-		scrollSpeedNormal = 2.0f;
-		scrollSpeedShift = 5.0f;
-		cursorPositionThreshold = 0.5;
+		smoothScrollingTime = 40.0f;
+		scrollSpeedNormal = 3.0f;
+		scrollSpeedShift = 10.0f;
+		cursorPositionThreshold = 0.5f;
 		drawWaveform = true;
 		drawHiSpeedAutomation = true;
 		hiSpeedGraphLimit = 5.0f;
-		hiSpeedGraphBgOpacity = 0.59f;
-		showTickInProperties = false;
+		hiSpeedGraphBgOpacity = 0.50f;
+		showTickInProperties = true;
 		followCursorInPlayback = true;
 		returnToLastSelectedTickOnPause = false;
 
+		pvNoteSpeed = 10.0f;
+		pvMirrorScore = false;
+		pvDrawToolbar = true;
+		pvBackgroundBrightness = 0.5f;
+		pvStageOpacity = 1.0f;
+		pvStageCover = 0.0f;
+		pvEffectsProfile = 0;
+		pvFlickAnimation = true;
+		pvHoldAnimation = true;
+		pvSimultaneousLine = true;
+		pvHoldAlpha = 0.8f;
+		pvGuideAlpha = 0.7f;
+
 		autoSaveEnabled = true;
-		autoSaveInterval = 5;
-		autoSaveMaxCount = 100;
+		autoSaveInterval = 1;
+		autoSaveMaxCount = 60;
 
 		seProfileIndex = 0;
-		masterVolume = 1.0f;
+		masterVolume = 0.5f;
 		bgmVolume = 1.0f;
 		seVolume = 1.0f;
 

@@ -932,7 +932,6 @@ namespace MikuMikuWorld
 		ImGui::SetNextItemWidth(50);
 		ImGui::InputInt("##goto_measure", &gotoMeasure, 0, 0, ImGuiInputTextFlags_AutoSelectAll);
 		activated |= ImGui::IsItemFocused() && ImGui::IsKeyPressed(ImGuiKey_Enter, false);
-		UI::tooltip(getString("goto_measure"));
 
 		ImGui::SameLine();
 		activated |= UI::transparentButton(ICON_FA_ARROW_RIGHT, UI::btnSmall);

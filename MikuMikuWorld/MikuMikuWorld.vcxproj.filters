@@ -381,6 +381,7 @@
       <Filter>ScorePreview\Effects</Filter>
     </ClInclude>
     <ClInclude Include="ChartGalleryWindow.h" />
+    <ClInclude Include="Version.h" />
   </ItemGroup>
   <ItemGroup>
     <Filter Include="Imgui">

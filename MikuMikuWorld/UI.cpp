@@ -31,9 +31,11 @@ namespace MikuMikuWorld
 	char UI::idStr[256];
 
 	std::vector<ImVec4> UI::accentColors{
-		ImVec4{ 0.10f, 0.10f, 0.10f, 1.00f }, // User
-		ImVec4{ 0.16f, 0.44f, 0.75f, 1.00f }, // Default : Original MMW
-		ImVec4{ 0.90f, 0.72f, 0.60f, 1.00f }, // Minori's Color!!!
+		ImVec4{ 0.2f, 0.2f, 0.2f, 1.00f }, // User
+		ImVec4{ 0.16f, 0.44f, 0.75f, 1.00f }, // Original MMW
+		ImVec4{ 0.51f, 0.80f, 0.82f, 1.00f }, // Chart Cyanvas
+		ImVec4{ 0.45f, 0.29f, 0.75f, 1.00f }, // UntiltedCharts
+		ImVec4{ 0.90f, 0.72f, 0.60f, 1.00f }, // Minori's Color (Monchi)
 		ImVec4{ 0.30f, 0.31f, 0.86f, 1.00f }, // Light Music
 		ImVec4{ 0.40f, 0.69f, 0.15f, 1.00f }, // Idol
 		ImVec4{ 0.76f, 0.05f, 0.32f, 1.00f }, // Street
@@ -401,7 +403,6 @@ namespace MikuMikuWorld
 		ImGui::SetNextItemWidth(width);
 
 		act |= ImGui::SliderFloat(labelID(label), &value, min, max, "%.2fx");
-		tooltip(getString("zoom_tooltip"));
 		ImGui::SameLine();
 
 		if (UI::transparentButton(ICON_FA_SEARCH_PLUS, UI::btnSmall, true, value < max))

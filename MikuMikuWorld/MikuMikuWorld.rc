@@ -1,6 +1,7 @@
 // Microsoft Visual C++ generated resource script.
 //
 #include "resource.h"
+#include "Version.h"
 
 #define APSTUDIO_READONLY_SYMBOLS
 /////////////////////////////////////////////////////////////////////////////
@@ -61,8 +62,8 @@ IDI_ICON1               ICON                    "mmw_icon.ico"
 //
 
 VS_VERSION_INFO VERSIONINFO
- FILEVERSION 3,2,1,37
- PRODUCTVERSION 3,2,1,37
+ FILEVERSION MMW_APP_VERSION_WINDOWS_NUMERIC
+ PRODUCTVERSION MMW_APP_VERSION_WINDOWS_NUMERIC
  FILEFLAGSMASK 0x3fL
 #ifdef DEBUG
  FILEFLAGS 0x1L
@@ -77,13 +78,13 @@ BEGIN
     BEGIN
         BLOCK "200004b0"
         BEGIN
-            VALUE "FileDescription", "MikuMikuWorld for UntitledCharts"
-            VALUE "FileVersion", "3.2.1.37"
-            VALUE "InternalName", "MikuMikuWorld.exe"
+            VALUE "FileDescription", "A fork of MikuMikuWorld for UntitledCharts by Monchi"
+            VALUE "FileVersion", MMW_APP_VERSION_WINDOWS_STRING
+            VALUE "InternalName", "MMW4UCbyMonchi.exe"
             VALUE "LegalCopyright", "Copyright (C) MikuMikuWorld contributors"
             VALUE "OriginalFilename", "MikuMikuWorld.exe"
-            VALUE "ProductName", "MikuMikuWorld for UntitledCharts"
-            VALUE "ProductVersion", "3.2.1.37"
+            VALUE "ProductName", "MikuMikuWorld for UntitledCharts by Monchi"
+            VALUE "ProductVersion", MMW_APP_VERSION_WINDOWS_STRING
         END
     END
     BLOCK "VarFileInfo"

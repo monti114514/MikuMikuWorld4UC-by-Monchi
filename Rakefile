@@ -1,3 +1,25 @@
+def app_version_parts
+  header = File.read("./MikuMikuWorld/Version.h")
+  %w[MAJOR MINOR PATCH BUILD].map do |part|
+    header.match(/#define\s+MMW_APP_VERSION_#{part}\s+(\d+)/)&.[](1) ||
+      abort("MMW_APP_VERSION_#{part} not found")
+  end
+end
+
+def app_version
+  app_version_parts[0, 3].join(".")
+end
+
+def windows_version
+  app_version_parts.join(".")
+end
+
+def update_version_define(header, name, value)
+  pattern = /#define\s+#{name}\s+\d+/
+  abort "#{name} not found" unless header.match?(pattern)
+  header.gsub(pattern, "#define #{name} #{value}")
+end
+
 task "build:msbuild" do
   puts "Running msbuild"
   sh "msbuild /p:Configuration=Release /p:Platform=x64"
@@ -19,14 +41,12 @@ end
 task "build:installer" do
   puts "Building installer"
   installer = File.read("./installerBase.nsi")
-  version =
-    File
-      .read("./MikuMikuWorld/MikuMikuWorld.rc")
-      .match(/FILEVERSION (\d+),(\d+),(\d+),(\d+)/)
-      .to_a[
-      1..-1
-    ].join(".")
-  File.write("./installer.nsi", installer.gsub(/{version}/, version))
+  File.write(
+    "./installer.nsi",
+    installer
+      .gsub(/{version}/, app_version)
+      .gsub(/{windows_version}/, windows_version)
+  )
 
   candidates = []
   exts = ENV["PATHEXT"]&.split(";") || [""]
@@ -97,19 +117,19 @@ task "check" => %w[check:translation]
 
 task "update", [:version] do |t, args|
   abort "version is required" unless args[:version]
-  rc = File.read("./MikuMikuWorld/MikuMikuWorld.rc")
 
-  version_raw = args[:version]
+  version_raw = args[:version].sub(/\Av/i, "")
   version = version_raw.sub(/[^0-9.].*/, "").split(".")
+  abort "version must be MAJOR.MINOR.PATCH[.BUILD]" unless (3..4).cover?(version.size)
+  abort "version must be numeric" unless version.all? { |part| part.match?(/\A\d+\z/) }
+  version << "0" while version.size < 4
+
   puts "Update: v#{version_raw} (#{version.join(".")})"
-  rc.gsub!(/FILEVERSION .+/, "FILEVERSION #{version.join(",")}")
-  rc.gsub!(/PRODUCTVERSION .+/, "PRODUCTVERSION #{version.join(",")}")
-  rc.gsub!(/"FileVersion", ".+"/, %Q("FileVersion", "#{version.join(".")}"))
-  rc.gsub!(
-    /"ProductVersion", ".+"/,
-    %Q("ProductVersion", "#{version.join(".")}")
-  )
-  File.write("./MikuMikuWorld/MikuMikuWorld.rc", rc)
+  header = File.read("./MikuMikuWorld/Version.h")
+  %w[MAJOR MINOR PATCH BUILD].each_with_index do |part, index|
+    header = update_version_define(header, "MMW_APP_VERSION_#{part}", version[index])
+  end
+  File.write("./MikuMikuWorld/Version.h", header)
 
   changelog_path = ".update-changelog"
   changelog = File.exist?(changelog_path) ? File.read(changelog_path).strip : ""
@@ -134,8 +154,7 @@ task "action:version" do
   ref = ENV["GITHUB_REF"] or abort "GITHUB_REF not set"
   tag = ref.split("/").last
 
-  rc = File.read("./MikuMikuWorld/MikuMikuWorld.rc")
-  version_raw = rc.match(/FILEVERSION\s+(\d+),(\d+),(\d+),(\d+)/).captures.join(".")
+  version_raw = app_version
 
   if tag.include?("-preview")
     body, status = Open3.capture2("git", "log", "-1", "--pretty=%b")

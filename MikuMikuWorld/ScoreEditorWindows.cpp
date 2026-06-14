@@ -1044,7 +1044,7 @@ namespace MikuMikuWorld
 
 			if (ImGui::Button(getString("yes"), btnSz))
 			{
-				system("start https://github.com/UntitledCharts/MikuMikuWorld4UC/releases");
+				system("start https://github.com/monti114514/MikuMikuWorld4UC-by-Monchi/releases");
 				ImGui::CloseCurrentPopup();
 				ImGui::EndPopup();
 				return DialogResult::Ok;
@@ -1605,12 +1605,12 @@ namespace MikuMikuWorld
 						ImGui::Separator();
 
 						UI::addCheckboxProperty(getString("draw_waveform"), config.drawWaveform);
+						UI::addCheckboxProperty(getString("return_to_last_tick"), config.returnToLastSelectedTickOnPause);
+						ImGui::Separator();
+
 						UI::addCheckboxProperty(getString("draw_hispeed_automation"), config.drawHiSpeedAutomation);
 						UI::addSliderProperty(getString("hispeed_graph_limit"), config.hiSpeedGraphLimit, 1.0f, 10.0f, "%.1fx");
 						UI::addPercentSliderProperty(getString("hispeed_graph_bg_opacity"), config.hiSpeedGraphBgOpacity);
-						UI::addCheckboxProperty(getString("return_to_last_tick"), config.returnToLastSelectedTickOnPause);
-						UI::addCheckboxProperty(getString("cursor_auto_scroll"), config.followCursorInPlayback);
-						UI::addPercentSliderProperty(getString("cursor_auto_scroll_amount"), config.cursorPositionThreshold);
 						UI::endPropertyColumns();
 					}
 
@@ -1618,6 +1618,10 @@ namespace MikuMikuWorld
 					                            ImGuiTreeNodeFlags_DefaultOpen))
 					{
 						UI::beginPropertyColumns();
+						UI::addCheckboxProperty(getString("cursor_auto_scroll"), config.followCursorInPlayback);
+						UI::addPercentSliderProperty(getString("cursor_auto_scroll_amount"), config.cursorPositionThreshold);
+						ImGui::Separator();
+
 						UI::addFloatProperty(getString("scroll_speed_normal"),
 						                     config.scrollSpeedNormal, "%.1fx");
 						UI::addFloatProperty(getString("scroll_speed_shift"),
@@ -1697,9 +1701,29 @@ namespace MikuMikuWorld
 					if (ImGui::CollapsingHeader(getString("general"), ImGuiTreeNodeFlags_DefaultOpen))
 					{
 						UI::beginPropertyColumns();
-						UI::addSliderProperty(getString("notes_speed"), config.pvNoteSpeed, 1, 12, "%.2f");
-						UI::addCheckboxProperty(getString("mirror_score"), config.pvMirrorScore);
 						UI::addCheckboxProperty(getString("preview_draw_toolbar"), config.pvDrawToolbar);
+						UI::endPropertyColumns();
+					}
+
+					if (ImGui::CollapsingHeader(getString("visuals"), ImGuiTreeNodeFlags_DefaultOpen))
+					{
+						UI::beginPropertyColumns();
+						UI::addSliderProperty(getString("notes_speed"), config.pvNoteSpeed, 1, 12, "%.2f");
+						UI::addPercentSliderProperty(getString("stage_cover"), config.pvStageCover);
+						ImGui::Separator();
+
+						float hold_alpha = config.pvHoldAlpha * 100.f;
+						UI::addSliderProperty(getString("holds_alpha"), hold_alpha, 10, 100, "%.0f%%");
+						config.pvHoldAlpha = hold_alpha / 100.f;
+						float guide_alpha = config.pvGuideAlpha * 100.f;
+						UI::addSliderProperty(getString("guides_alpha"), guide_alpha, 10, 100, "%.0f%%");
+						config.pvGuideAlpha = guide_alpha / 100.f;
+						ImGui::Separator();
+
+						UI::addCheckboxProperty(getString("mirror_score"), config.pvMirrorScore);
+						// UI::addCheckboxProperty(getString("flicks_animation"), config.pvFlickAnimation);
+						// UI::addCheckboxProperty(getString("holds_animation"), config.pvHoldAnimation);
+						UI::addCheckboxProperty(getString("simultaneous_lines"), config.pvSimultaneousLine);
 						UI::endPropertyColumns();
 					}
 
@@ -1733,7 +1757,6 @@ namespace MikuMikuWorld
 						ImGui::Separator();
 
 						UI::addPercentSliderProperty(getString("stage_opacity"), config.pvStageOpacity);
-						UI::addPercentSliderProperty(getString("stage_cover"), config.pvStageCover);
 						UI::endPropertyColumns();
 					}
 
@@ -1741,25 +1764,6 @@ namespace MikuMikuWorld
 					{
 						UI::beginPropertyColumns();
 						UI::addSelectProperty(getString("notes_se"), config.seProfileIndex, Audio::soundEffectsProfileNames, Audio::soundEffectsProfileCount);
-						UI::endPropertyColumns();
-					}
-					
-					if (ImGui::CollapsingHeader(getString("visuals"), ImGuiTreeNodeFlags_DefaultOpen))
-					{
-						UI::beginPropertyColumns();
-						UI::addCheckboxProperty(getString("flicks_animation"), config.pvFlickAnimation);
-						UI::addCheckboxProperty(getString("holds_animation"), config.pvHoldAnimation);
-						UI::addCheckboxProperty(getString("simultaneous_lines"), config.pvSimultaneousLine);
-						ImGui::Separator();
-
-						float hold_alpha = config.pvHoldAlpha * 100.f;
-						UI::addSliderProperty(getString("holds_alpha"), hold_alpha, 10, 100, "%.0f%%");
-						config.pvHoldAlpha = hold_alpha / 100.f;
-
-						float guide_alpha = config.pvGuideAlpha * 100.f;
-						UI::addSliderProperty(getString("guides_alpha"), guide_alpha, 10, 100, "%.0f%%");
-						config.pvGuideAlpha = guide_alpha / 100.f;
-						
 						UI::endPropertyColumns();
 					}
 					
@@ -1823,7 +1827,6 @@ namespace MikuMikuWorld
 			if (UI::transparentButton(ICON_FA_EYE, ImVec2(layersButtonHeight, layersButtonHeight), false))
 				context.showAllLayers = !context.showAllLayers;
 			if (showAllLayers) ImGui::PopStyleColor();
-			UI::tooltip(getString("show_all_layers"));
 
 			float rightWidth = (layersButtonHeight * 4.0f) + (4.0f * 3.0f);
 			ImGui::SameLine(ImGui::GetWindowContentRegionMax().x - rightWidth);
@@ -1843,7 +1846,6 @@ namespace MikuMikuWorld
 				context.selectedLayer = renameIndex;
 				focusRenameInput = true;
 			}
-			UI::tooltip(getString("create_layer"));
 			ImGui::SameLine();
 
 			if (UI::transparentButton(ICON_FA_FOLDER_PLUS, ImVec2(layersButtonHeight, layersButtonHeight), false))
@@ -1858,27 +1860,24 @@ namespace MikuMikuWorld
 				context.selectedLayer = renameIndex;
 				focusRenameInput = true;
 			}
-			UI::tooltip(getString("create_folder")); // 日本語化
 			ImGui::SameLine();
 
 			bool canMerge = context.selectedLayer >= 0 && context.selectedLayer < context.score.layers.size() - 1 && !context.score.layers[context.selectedLayer].isFolder;
 			if (!canMerge) ImGui::BeginDisabled();
 			if (UI::transparentButton(ICON_FA_LEVEL_DOWN_ALT, ImVec2(layersButtonHeight, layersButtonHeight), false))
 			{
-				ImGui::OpenPopup(getString("layer_merge_confirm")); // 日本語化
+				ImGui::OpenPopup(getString("layer_merge_confirm"));
 			}
 			if (!canMerge) ImGui::EndDisabled();
-			UI::tooltip(getString("layer_merge"));
 			ImGui::SameLine();
 
 			bool canDelete = context.selectedLayer >= 0 && context.score.layers.size() > 1;
 			if (!canDelete) ImGui::BeginDisabled();
 			if (UI::transparentButton(ICON_FA_TRASH, ImVec2(layersButtonHeight, layersButtonHeight), false))
 			{
-				ImGui::OpenPopup(getString("layer_delete_confirm")); // 日本語化
+				ImGui::OpenPopup(getString("layer_delete_confirm"));
 			}
 			if (!canDelete) ImGui::EndDisabled();
-			UI::tooltip(getString("delete"));
 
 			ImGui::PopStyleVar();
 			ImGui::Separator();
@@ -2407,18 +2406,16 @@ namespace MikuMikuWorld
 
 			ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(4, 4));
 
-			if (UI::transparentButton(descendingOrder ? ICON_FA_CHEVRON_UP : ICON_FA_CHEVRON_DOWN, ImVec2(waypointButtonHeight, waypointButtonHeight), false))
-			{
+			std::string sortDirectionLabel = std::string(descendingOrder ? ICON_FA_SORT_AMOUNT_DOWN : ICON_FA_SORT_AMOUNT_UP) + " " + getString(descendingOrder ? "sort_descending" : "sort_ascending");
+			if (ImGui::Button(sortDirectionLabel.c_str(), ImVec2(0.0f, 0.0f)))
 				descendingOrder = !descendingOrder;
-			}
-			UI::tooltip(descendingOrder ? getString("sort_asc") : getString("sort_desc")); // 日本語化
 
 			float rightWpWidth = (waypointButtonHeight * 2.0f) + (4.0f * 1.0f);
 			ImGui::SameLine(ImGui::GetWindowContentRegionMax().x - rightWpWidth);
 
 			if (UI::transparentButton(ICON_FA_PLUS, ImVec2(waypointButtonHeight, waypointButtonHeight), false))
 			{
-				Waypoint newWp{ getString("new_waypoint"), context.currentTick }; // 日本語化
+				Waypoint newWp{ getString("new_waypoint"), context.currentTick };
 				context.score.waypoints.push_back(newWp);
 				
 				std::sort(context.score.waypoints.begin(), context.score.waypoints.end(),
@@ -2434,7 +2431,6 @@ namespace MikuMikuWorld
 					focusRenameInput = true;
 				}
 			}
-			UI::tooltip(getString("create_waypoint"));
 			ImGui::SameLine();
 
 			bool canDelete = selectedWaypointIndex >= 0 && selectedWaypointIndex < context.score.waypoints.size();
@@ -2446,7 +2442,6 @@ namespace MikuMikuWorld
 				renameIndex = -1;
 			}
 			if (!canDelete) ImGui::EndDisabled();
-			UI::tooltip(getString("delete"));
 
 			ImGui::PopStyleVar();
 			ImGui::Separator();
@@ -2491,8 +2486,8 @@ namespace MikuMikuWorld
 				ImGuiTableFlags tableFlags = ImGuiTableFlags_BordersInnerV | ImGuiTableFlags_Resizable;
 				if (ImGui::BeginTable("waypoints_table", 2, tableFlags))
 				{
-					ImGui::TableSetupColumn(getString("name"), ImGuiTableColumnFlags_WidthStretch); // 日本語化
-					ImGui::TableSetupColumn(getString("time"), ImGuiTableColumnFlags_WidthFixed, 140.0f); // 日本語化
+					ImGui::TableSetupColumn(getString("name"), ImGuiTableColumnFlags_WidthStretch);
+					ImGui::TableSetupColumn(getString("time"), ImGuiTableColumnFlags_WidthFixed, 140.0f);
 					
 					for (int i = 0; i < context.score.waypoints.size(); ++i)
 					{
@@ -2564,7 +2559,7 @@ namespace MikuMikuWorld
 						int measure = accumulateMeasures(waypoint.tick, TICKS_PER_BEAT, context.score.timeSignatures) + 1;
 						float time = accumulateDuration(waypoint.tick, TICKS_PER_BEAT, context.score.tempoChanges);
 						char timeStr[64];
-						// 小節の表示も日本語化
+
 						snprintf(timeStr, sizeof(timeStr), "%s %d (%02d:%02d)", getString("measure"), measure, (int)time / 60, (int)std::fmod(time, 60.0f));
 
 						ImGui::SetCursorScreenPos(ImVec2(ImGui::GetCursorScreenPos().x + ImGui::GetStyle().ItemSpacing.x, startPos.y));

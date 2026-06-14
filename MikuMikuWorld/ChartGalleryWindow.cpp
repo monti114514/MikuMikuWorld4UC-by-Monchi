@@ -919,12 +919,10 @@ namespace MikuMikuWorld
 			ImGui::EndDisabled();
 
 			ImGui::SameLine();
-			std::string sortDirectionLabel = std::string(sortAscending ? ICON_FA_SORT_AMOUNT_UP : ICON_FA_SORT_AMOUNT_DOWN) + " " + getString(sortAscending ? "gallery_sort_ascending" : "gallery_sort_descending");
+			std::string sortDirectionLabel = std::string(sortAscending ? ICON_FA_SORT_AMOUNT_UP : ICON_FA_SORT_AMOUNT_DOWN) + " " + getString(sortAscending ? "sort_ascending" : "sort_descending");
 			if (ImGui::Button(sortDirectionLabel.c_str(), ImVec2(sortDirectionWidth, 0.0f))) {
 				sortAscending = !sortAscending;
 			}
-			UI::tooltip(sortAscending ? getString("gallery_sort_ascending") : getString("gallery_sort_descending"));
-
 			ImGui::Spacing(); 
 
 			if (isSearchPathsOpen) {
@@ -964,7 +962,7 @@ namespace MikuMikuWorld
 				if (ImGui::Button((std::string(ICON_FA_FOLDER_OPEN) + " " + getString("gallery_browse_folder")).c_str()))
 					startFolderDialog();
 				ImGui::EndDisabled();
-				UI::tooltip(getString("gallery_browse_folder"));
+
 				if (folderDialogInProgress) {
 					ImGui::SameLine();
 					ImGui::TextDisabled("%s", getString("gallery_folder_dialog_open"));
