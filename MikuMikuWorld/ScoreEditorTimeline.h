@@ -172,6 +172,9 @@ namespace MikuMikuWorld
 
 		void updateScrollbar();
 		void updateScrollingPosition();
+		ImRect getFeverDisplayRect(const ScoreContext& context) const;
+		ImRect getHiSpeedDisplayRect(const ScoreContext& context) const;
+		void drawLeftMetaEventClusters(ScoreContext& context);
 
 		void drawWaveform(ScoreContext& context);
 		void drawHiSpeedGraph(ScoreContext& context);

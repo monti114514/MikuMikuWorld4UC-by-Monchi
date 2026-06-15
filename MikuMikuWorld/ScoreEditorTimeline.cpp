@@ -10,6 +10,8 @@
 #include "Utilities.h"
 #include <algorithm>
 #include <climits>
+#include <cmath>
+#include <map>
 #include <string>
 #include <vector>
 
@@ -55,6 +57,36 @@ namespace MikuMikuWorld
 			boundaries.erase(std::unique(boundaries.begin(), boundaries.end()), boundaries.end());
 			return boundaries;
 		}
+
+		const char* skillBadgeIcon(SkillEffect effect)
+		{
+			switch (effect)
+			{
+			case SkillEffect::Score:
+				return ICON_FA_ARROW_UP;
+			case SkillEffect::Heal:
+				return ICON_FA_HEART;
+			case SkillEffect::Perfect:
+				return ICON_FA_GEM;
+			default:
+				return ICON_FA_ARROW_UP;
+			}
+		}
+
+		ImU32 skillBadgeColor(SkillEffect effect)
+		{
+			switch (effect)
+			{
+			case SkillEffect::Score:
+				return ImGui::ColorConvertFloat4ToU32(ImVec4(0.20f, 0.70f, 1.00f, 1.00f));
+			case SkillEffect::Heal:
+				return ImGui::ColorConvertFloat4ToU32(ImVec4(0.45f, 0.88f, 0.30f, 1.00f));
+			case SkillEffect::Perfect:
+				return ImGui::ColorConvertFloat4ToU32(ImVec4(0.70f, 0.42f, 1.00f, 1.00f));
+			default:
+				return skillColor;
+			}
+		}
 	}
 
 	ScoreEditorTimeline* timelineInstance = nullptr;
@@ -86,6 +118,30 @@ namespace MikuMikuWorld
 		return activated;
 	}
 
+	bool metaClusterControl(const char* id, float lineStartX, Vector2 pos, float width, ImU32 color,
+	                        const char* txt, bool enabled)
+	{
+		ImDrawList* drawList = ImGui::GetWindowDrawList();
+		if (!drawList)
+			return false;
+
+		pos.x = floorf(pos.x);
+		pos.y = floorf(pos.y);
+
+		ImGui::PushID(id);
+		ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, { 1, 0 });
+		const float buttonWidth = std::max(1.0f, width - ImGui::GetStyle().FramePadding.x);
+		bool activated = UI::coloredButton(
+		    txt, { pos.x, pos.y - ImGui::GetFrameHeightWithSpacing() }, { buttonWidth, -1 },
+		    color, enabled);
+		ImGui::PopStyleVar();
+		ImGui::PopID();
+		drawList->AddLine({ lineStartX, pos.y }, { pos.x + ImGui::GetItemRectSize().x, pos.y },
+		                  color, primaryLineThickness);
+
+		return activated;
+	}
+
 	float ScoreEditorTimeline::getNoteYPosFromTick(int tick) const
 	{
 		return position.y + tickToPosition(tick) - visualOffset + size.y;
@@ -106,6 +162,265 @@ namespace MikuMikuWorld
 	float ScoreEditorTimeline::laneToPosition(float lane) const
 	{
 		return laneOffset + (lane * laneWidth);
+	}
+
+	ImRect ScoreEditorTimeline::getFeverDisplayRect(const ScoreContext& context) const
+	{
+		const float dpiScale = ImGui::GetMainViewport()->DpiScale;
+		const float gap = 8.0f * dpiScale;
+		const float width = 78.0f * dpiScale;
+		const float x = getTimelineEndX(context) + gap;
+		return ImRect({ x, position.y }, { x + width, position.y + size.y });
+	}
+
+	ImRect ScoreEditorTimeline::getHiSpeedDisplayRect(const ScoreContext& context) const
+	{
+		const float dpiScale = ImGui::GetMainViewport()->DpiScale;
+		const ImRect feverRect = getFeverDisplayRect(context);
+		const float x = feverRect.Max.x + (10.0f * dpiScale);
+		const float maxRight = position.x + size.x - (4.0f * dpiScale);
+		const float width = std::min(100.0f * dpiScale, std::max(0.0f, maxRight - x));
+		return ImRect({ x, position.y }, { x + width, position.y + size.y });
+	}
+
+	void ScoreEditorTimeline::drawLeftMetaEventClusters(ScoreContext& context)
+	{
+		const float dpiScale = ImGui::GetMainViewport()->DpiScale;
+		const float timelineStartX = getTimelineStartX(context);
+		const float clusterRight = timelineStartX - (6.0f * dpiScale);
+		const float clusterLeftLimit = position.x + (4.0f * dpiScale);
+		const float availableWidth = clusterRight - clusterLeftLimit;
+		if (availableWidth <= 32.0f * dpiScale)
+			return;
+
+		enum class ClusterItemType
+		{
+			Waypoint,
+			Bpm,
+			TimeSignature,
+			Skill,
+		};
+
+		struct ClusterItem
+		{
+			ClusterItemType type;
+			int priority{};
+			int tick{};
+			float y{};
+			float preferredWidth{};
+			float minWidth{};
+			ImU32 color{};
+			std::string id;
+			std::string text;
+
+			int waypointIndex = -1;
+			int bpmIndex = -1;
+			int timeSignatureMeasure = -1;
+			id_t skillId = static_cast<id_t>(-1);
+		};
+
+		struct Cluster
+		{
+			float y{};
+			std::vector<ClusterItem> items;
+		};
+
+		auto eventY = [this](int tick)
+		{
+			return position.y - tickToPosition(tick) + visualOffset;
+		};
+
+		std::vector<ClusterItem> items;
+		for (int index = 0; index < context.score.waypoints.size(); ++index)
+		{
+			const Waypoint& waypoint = context.score.waypoints[index];
+			if (waypoint.tick < 0)
+				continue;
+
+			ClusterItem item;
+			item.type = ClusterItemType::Waypoint;
+			item.priority = 0;
+			item.tick = waypoint.tick;
+			item.y = eventY(waypoint.tick);
+			item.color = waypointColor;
+			item.id = IO::formatString("meta_waypoint_%d_%s", waypoint.tick, waypoint.name.c_str());
+			item.text = waypoint.name;
+			item.preferredWidth = std::min(ImGui::CalcTextSize(item.text.c_str()).x +
+			                                   (14.0f * dpiScale),
+			                               180.0f * dpiScale);
+			item.minWidth = 54.0f * dpiScale;
+			item.waypointIndex = index;
+			items.push_back(item);
+		}
+
+		for (int index = 0; index < context.score.tempoChanges.size(); ++index)
+		{
+			const Tempo& tempo = context.score.tempoChanges[index];
+			ClusterItem item;
+			item.type = ClusterItemType::Bpm;
+			item.priority = 1;
+			item.tick = tempo.tick;
+			item.y = eventY(tempo.tick);
+			item.color = tempoColor;
+			item.id = IO::formatString("meta_bpm_%d_%g", tempo.tick, tempo.bpm);
+			item.text = IO::formatString("%g BPM", tempo.bpm);
+			item.preferredWidth = 68.0f * dpiScale;
+			item.minWidth = 54.0f * dpiScale;
+			item.bpmIndex = index;
+			items.push_back(item);
+		}
+
+		for (const auto& [measure, ts] : context.score.timeSignatures)
+		{
+			const int tick = measureToTicks(ts.measure, TICKS_PER_BEAT,
+			                                context.score.timeSignatures);
+			ClusterItem item;
+			item.type = ClusterItemType::TimeSignature;
+			item.priority = 2;
+			item.tick = tick;
+			item.y = eventY(tick);
+			item.color = timeColor;
+			item.id = IO::formatString("meta_time_signature_%d_%d_%d", tick, ts.numerator,
+			                           ts.denominator);
+			item.text = IO::formatString("%d/%d", ts.numerator, ts.denominator);
+			item.preferredWidth = 42.0f * dpiScale;
+			item.minWidth = 36.0f * dpiScale;
+			item.timeSignatureMeasure = measure;
+			items.push_back(item);
+		}
+
+		for (const auto& [id, skill] : context.score.skills)
+		{
+			ClusterItem item;
+			item.type = ClusterItemType::Skill;
+			item.priority = 3;
+			item.tick = skill.tick;
+			item.y = eventY(skill.tick);
+			item.color = skillBadgeColor(skill.effect);
+			item.id = IO::formatString("meta_skill_%d_%d", id, skill.tick);
+			item.text = IO::formatString("%s Lv.%d", skillBadgeIcon(skill.effect), skill.level);
+			item.preferredWidth = 72.0f * dpiScale;
+			item.minWidth = 58.0f * dpiScale;
+			item.skillId = id;
+			items.push_back(item);
+		}
+
+		std::sort(items.begin(), items.end(), [](const ClusterItem& a, const ClusterItem& b) {
+			return a.y == b.y ? a.priority < b.priority : a.y < b.y;
+		});
+
+		const float clusterThreshold =
+		    std::max(ImGui::GetFrameHeightWithSpacing(), 24.0f * dpiScale);
+		std::vector<Cluster> clusters;
+		for (const ClusterItem& item : items)
+		{
+			if (clusters.empty() || std::abs(item.y - clusters.back().y) > clusterThreshold)
+			{
+				clusters.push_back({ item.y, { item } });
+				continue;
+			}
+
+			Cluster& cluster = clusters.back();
+			const float count = static_cast<float>(cluster.items.size());
+			cluster.y = ((cluster.y * count) + item.y) / (count + 1.0f);
+			cluster.items.push_back(item);
+		}
+
+		const float gap = 4.0f * dpiScale;
+		for (Cluster& cluster : clusters)
+		{
+			std::stable_sort(cluster.items.begin(), cluster.items.end(),
+			                 [](const ClusterItem& a, const ClusterItem& b) {
+				                 return a.priority < b.priority;
+			                 });
+
+			std::vector<float> widths;
+			widths.reserve(cluster.items.size());
+			float totalWidth = gap * std::max(0, static_cast<int>(cluster.items.size()) - 1);
+			for (const ClusterItem& item : cluster.items)
+			{
+				widths.push_back(item.preferredWidth);
+				totalWidth += item.preferredWidth;
+			}
+
+			if (totalWidth > availableWidth && !widths.empty())
+			{
+				const float gapWidth = gap * std::max(0, static_cast<int>(widths.size()) - 1);
+				const float itemSpace = std::max(1.0f, availableWidth - gapWidth);
+				const float preferredSpace = std::max(1.0f, totalWidth - gapWidth);
+				const float scale = itemSpace / preferredSpace;
+				totalWidth = gapWidth;
+				for (size_t i = 0; i < widths.size(); ++i)
+				{
+					widths[i] = std::max(cluster.items[i].minWidth, widths[i] * scale);
+					totalWidth += widths[i];
+				}
+				if (totalWidth > availableWidth)
+				{
+					const float uniformWidth =
+					    std::max(1.0f, (availableWidth - gapWidth) / widths.size());
+					totalWidth = gapWidth;
+					for (float& width : widths)
+					{
+						width = uniformWidth;
+						totalWidth += width;
+					}
+				}
+			}
+
+			float x = std::max(clusterLeftLimit, clusterRight - totalWidth);
+
+			for (size_t i = 0; i < cluster.items.size(); ++i)
+			{
+				const ClusterItem& item = cluster.items[i];
+				const bool enabled = item.type == ClusterItemType::Waypoint || !playing;
+				if (metaClusterControl(item.id.c_str(), timelineStartX, { x, item.y },
+				                       widths[i], item.color, item.text.c_str(), enabled))
+				{
+					if (item.type == ClusterItemType::Waypoint &&
+					    isArrayIndexInBounds(item.waypointIndex, context.score.waypoints))
+					{
+						const Waypoint& waypoint = context.score.waypoints[item.waypointIndex];
+						eventEdit.editId = item.waypointIndex;
+						eventEdit.editName = waypoint.name;
+						eventEdit.type = EventType::Waypoint;
+						ImGui::OpenPopup("edit_event");
+					}
+					else if (item.type == ClusterItemType::Bpm &&
+					         isArrayIndexInBounds(item.bpmIndex, context.score.tempoChanges))
+					{
+						eventEdit.editId = item.bpmIndex;
+						eventEdit.editBpm = context.score.tempoChanges[item.bpmIndex].bpm;
+						eventEdit.type = EventType::Bpm;
+						ImGui::OpenPopup("edit_event");
+					}
+					else if (item.type == ClusterItemType::TimeSignature &&
+					         context.score.timeSignatures.find(item.timeSignatureMeasure) !=
+					             context.score.timeSignatures.end())
+					{
+						const TimeSignature& ts =
+						    context.score.timeSignatures[item.timeSignatureMeasure];
+						eventEdit.editId = item.timeSignatureMeasure;
+						eventEdit.editTimeSignatureNumerator = ts.numerator;
+						eventEdit.editTimeSignatureDenominator = ts.denominator;
+						eventEdit.type = EventType::TimeSignature;
+						ImGui::OpenPopup("edit_event");
+					}
+					else if (item.type == ClusterItemType::Skill &&
+					         context.score.skills.find(item.skillId) != context.score.skills.end())
+					{
+						const SkillTrigger& skill = context.score.skills[item.skillId];
+						eventEdit.editId = item.skillId;
+						eventEdit.editSkillEffect = skill.effect;
+						eventEdit.editSkillLevel = skill.level;
+						eventEdit.type = EventType::Skill;
+						ImGui::OpenPopup("edit_event");
+					}
+				}
+
+				x += widths[i] + gap;
+			}
+		}
 	}
 
 	bool ScoreEditorTimeline::isNoteVisible(const Note& note, int offsetTicks) const
@@ -582,19 +897,17 @@ namespace MikuMikuWorld
 			{
 				float dpiScale = ImGui::GetMainViewport()->DpiScale;
 
-				// getTimelineEndX() にはウィンドウの絶対座標(position.x)が含まれてしまっているため、
-				// 引き算をしてタイムライン内での「相対X座標」に変換します。
-				float relativeEndX = getTimelineEndX(context) - position.x;
-				
 				float lx, rx;
 				if (config.drawHiSpeedAutomation) {
 					// グラフ表示（オートメーション）オンの場合の判定エリア
-					lx = relativeEndX + 10.0f * dpiScale;
-					rx = lx + 100.0f * dpiScale;
+					const ImRect hiSpeedRect = getHiSpeedDisplayRect(context);
+					lx = hiSpeedRect.Min.x - position.x;
+					rx = hiSpeedRect.Max.x - position.x;
 				} else {
 					// 従来のテキスト表示（レガシー）の場合の判定エリア
-					lx = relativeEndX + 123.0f * dpiScale;
-					rx = relativeEndX + 180.0f * dpiScale;
+					const ImRect hiSpeedRect = getHiSpeedDisplayRect(context);
+					lx = hiSpeedRect.Min.x - position.x + 60.0f * dpiScale;
+					rx = lx + 80.0f * dpiScale;
 				}
 
 				float y = -tickToPosition(hsc.tick);
@@ -793,47 +1106,7 @@ namespace MikuMikuWorld
 			}
 		}
 
-		// Update time signature changes
-		for (auto& [measure, ts] : context.score.timeSignatures)
-		{
-			if (timeSignatureControl(
-			        context, ts.numerator, ts.denominator,
-			        measureToTicks(ts.measure, TICKS_PER_BEAT, context.score.timeSignatures),
-			        !playing))
-			{
-				eventEdit.editId = measure;
-				eventEdit.editTimeSignatureNumerator = ts.numerator;
-				eventEdit.editTimeSignatureDenominator = ts.denominator;
-				eventEdit.type = EventType::TimeSignature;
-				ImGui::OpenPopup("edit_event");
-			}
-		}
-
-		// Update bpm changes
-		for (int index = 0; index < context.score.tempoChanges.size(); ++index)
-		{
-			Tempo& tempo = context.score.tempoChanges[index];
-			if (bpmControl(context, tempo))
-			{
-				eventEdit.editId = index;
-				eventEdit.editBpm = tempo.bpm;
-				eventEdit.type = EventType::Bpm;
-				ImGui::OpenPopup("edit_event");
-			}
-		}
-
-		// Update waypoints
-		for (int index = 0; index < context.score.waypoints.size(); ++index)
-		{
-			Waypoint& wp = context.score.waypoints[index];
-			if (waypointControl(context, wp))
-			{
-				eventEdit.editId = index;
-				eventEdit.editName = wp.name;
-				eventEdit.type = EventType::Waypoint;
-				ImGui::OpenPopup("edit_event");
-			}
-		}
+		drawLeftMetaEventClusters(context);
 
 		// Update song boundaries
 		if (context.audio.isMusicInitialized())
@@ -858,19 +1131,6 @@ namespace MikuMikuWorld
 			eventEdit.editFeverEndTick = context.score.fever.endTick;
 			eventEdit.type = EventType::Fever;
 			ImGui::OpenPopup("edit_event");
-		}
-
-		// Update skill triggers
-		for (const auto& [id, skill] : context.score.skills)
-		{
-			if (skillControl(context, skill))
-			{
-				eventEdit.editId = id;
-				eventEdit.editSkillEffect = skill.effect;
-				eventEdit.editSkillLevel = skill.level;
-				eventEdit.type = EventType::Skill;
-				ImGui::OpenPopup("edit_event");
-			}
 		}
 
 		eventEditor(context);
@@ -2663,6 +2923,21 @@ namespace MikuMikuWorld
 
 	bool ScoreEditorTimeline::feverControl(const ScoreContext& context, const Fever& fever)
 	{
+		ImDrawList* drawList = ImGui::GetWindowDrawList();
+		if (drawList && fever.startTick >= 0 && fever.endTick >= 0)
+		{
+			const ImRect rect = getFeverDisplayRect(context);
+			const float x = floorf((rect.Min.x + rect.Max.x) * 0.5f);
+			float y1 = position.y - tickToPosition(fever.startTick) + visualOffset;
+			float y2 = position.y - tickToPosition(fever.endTick) + visualOffset;
+			if (y1 > y2)
+				std::swap(y1, y2);
+
+			y1 = std::clamp(y1, position.y, position.y + size.y);
+			y2 = std::clamp(y2, position.y, position.y + size.y);
+			drawList->AddLine({ x, y1 }, { x, y2 }, feverColor, 2.0f);
+		}
+
 		return feverControl(context, fever.startTick, true, !playing) ||
 		       feverControl(context, fever.endTick, false, !playing);
 	}
@@ -2676,9 +2951,10 @@ namespace MikuMikuWorld
 		txt.append(start ? ICON_FA_CARET_UP : ICON_FA_CARET_DOWN);
 
 		float dpiScale = ImGui::GetMainViewport()->DpiScale;
-		Vector2 pos{ getTimelineStartX(context) - (108 * dpiScale),
+		const ImRect rect = getFeverDisplayRect(context);
+		Vector2 pos{ rect.Min.x + (2.0f * dpiScale),
 			         position.y - tickToPosition(tick) + visualOffset };
-		return eventControl(getTimelineStartX(context), pos, feverColor, txt.c_str(), enabled);
+		return eventControl(getTimelineEndX(context), pos, feverColor, txt.c_str(), enabled);
 	}
 
 	bool ScoreEditorTimeline::hiSpeedControl(const ScoreContext& context, const HiSpeedChange& hiSpeed)
@@ -2707,14 +2983,15 @@ namespace MikuMikuWorld
 			layerStr += ")";
 		}
 		std::string txt = IO::formatString("%s%sx%s%s", easeStr, speedStr, skipStr, layerStr);
-		Vector2 pos{ getTimelineEndX(context) +
-			             (enabled ? 123 : 180) * ImGui::GetMainViewport()->DpiScale,
+		float dpiScale = ImGui::GetMainViewport()->DpiScale;
+		const float hiSpeedStartX = getHiSpeedDisplayRect(context).Min.x;
+		Vector2 pos{ hiSpeedStartX + (enabled ? 55 : 112) * dpiScale,
 			         position.y - tickToPosition(tick) + visualOffset };
 		auto color = hideNotes ? (enabled ? hideSpeedColor : inactiveHideSpeedColor)
 		                       : (enabled ? speedColor : inactiveSpeedColor);
 
 		return eventControl(
-		    getTimelineEndX(context), pos,
+		    hiSpeedStartX, pos,
 		    selected ? ImGui::ColorConvertFloat4ToU32(generateHighlightColor(
 		                   generateHighlightColor(ImGui::ColorConvertU32ToFloat4(color))))
 		             : color,
@@ -3501,9 +3778,12 @@ namespace MikuMikuWorld
 	}
 
 	float dpiScale = ImGui::GetMainViewport()->DpiScale;
-	float laneStartX = getTimelineEndX(context) + (10.0f * dpiScale); 
-	float laneWidth = 100.0f * dpiScale;
-	float laneEndX = laneStartX + laneWidth;
+	const ImRect hiSpeedRect = getHiSpeedDisplayRect(context);
+	float laneStartX = hiSpeedRect.Min.x;
+	float laneWidth = hiSpeedRect.Max.x - hiSpeedRect.Min.x;
+	float laneEndX = hiSpeedRect.Max.x;
+	if (laneWidth <= 20.0f * dpiScale)
+		return;
 	
 	// configの値 (0.0~1.0) を 0~255 に変換して適用
 	int bgAlpha = std::clamp((int)(config.hiSpeedGraphBgOpacity * 255.0f), 0, 255);
@@ -3513,6 +3793,8 @@ namespace MikuMikuWorld
 	float padding = 15.0f * dpiScale;
 	float drawableStartX = laneStartX + padding;
 	float drawableWidth = laneWidth - (padding * 2);
+	if (drawableWidth <= 1.0f)
+		return;
 
 	// 設定画面で指定された上限・下限値を参照する
 	float graphLimit = config.hiSpeedGraphLimit;
