@@ -119,6 +119,20 @@ namespace MikuMikuWorld
 		bool insertingFever{ false };
 		int feverDragStartTick{ -1 };
 		int feverDragEndTick{ -1 };
+		enum class AudioDragMode : uint8_t
+		{
+			None,
+			Move,
+			TrimStart,
+			TrimEnd,
+			FadeIn,
+			FadeOut
+		};
+		AudioDragMode audioDragMode{ AudioDragMode::None };
+		id_t draggingAudioClip{ static_cast<id_t>(-1) };
+		AudioClip audioDragStartClip{};
+		Score audioDragStartScore{};
+		float audioDragStartTimelineMs{};
 
 		float time{};
 		float timeLastFrame{};
@@ -194,6 +208,9 @@ namespace MikuMikuWorld
 		void updateMetaEventDrag(ScoreContext& context);
 
 		void drawWaveform(ScoreContext& context);
+		void drawAudioTrack(ScoreContext& context);
+		void updateAudioTrackEditing(ScoreContext& context);
+		ImRect getAudioClipRect(ScoreContext& context, const AudioClip& clip) const;
 		void drawHiSpeedGraph(ScoreContext& context);
 
 		void drawHoldCurve(const Note& n1, const Note& n2, EaseType ease, bool isGuide,

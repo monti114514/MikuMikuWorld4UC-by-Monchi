@@ -1,6 +1,8 @@
 #include "Application.h"
 #include "ScoreSerializeWindow.h"
 
+#include "AudioTrackUtils.h"
+#include "File.h"
 #include "NativeScoreSerializer.h"
 #include "SusSerializer.h"
 #include "UscSerializer.h"
@@ -108,7 +110,30 @@ namespace MikuMikuWorld
 		{
 			try
 			{
+				SerializeFormat format = toSerializeFormat(filename);
+				if (format == SerializeFormat::LvlDataFormat &&
+				    AudioTrackUtils::hasAudioTrackEdits(score))
+				{
+					score.metadata.musicOffset =
+					    AudioTrackUtils::getRenderedTimelineStartMs(score, score.metadata.musicOffset);
+				}
 				serializer->serialize(score, filename);
+				if (format == SerializeFormat::LvlDataFormat &&
+				    AudioTrackUtils::hasAudioTrackEdits(score))
+				{
+					std::string editedAudioFilename;
+					Result audioResult = AudioTrackUtils::exportEditedAudio(
+					    score, score.metadata.musicFile, IO::File::getFilepath(filename),
+					    editedAudioFilename);
+					if (!audioResult.isOk())
+					{
+						errorMessage = IO::formatString("%s\n%s: %s",
+						                                "Failed to export edited audio",
+						                                getString("error"),
+						                                audioResult.getMessage().c_str());
+						return SerializeResult::Error;
+					}
+				}
 				serializer.reset();
 				return SerializeResult::SerializeSuccess;
 			}
@@ -372,7 +397,9 @@ namespace MikuMikuWorld
 			    EditorScoreData(context.score.metadata, controller->getScoreFilename());
 
 			editor.loadMusic(context.workingData.musicFilename);
-			context.audio.setMusicOffset(0, context.workingData.musicOffset);
+			context.audio.setMusicOffset(
+			    0, AudioTrackUtils::getRenderedTimelineStartMs(context.score,
+			                                                   context.workingData.musicOffset));
 
 			context.scoreStats.calculateStats(context.score);
 			timeline.calculateMaxOffsetFromScore(context.score);

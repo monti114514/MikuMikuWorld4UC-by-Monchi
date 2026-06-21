@@ -6,6 +6,7 @@
 #include "Application.h"
 #include "ApplicationConfiguration.h"
 #include "Audio/Sound.h"
+#include "AudioTrackUtils.h"
 #include "Constants.h"
 #include "File.h"
 #include "IO.h"
@@ -602,6 +603,8 @@ namespace MikuMikuWorld
 		context.audio.disposeMusic();
 		context.waveformL.clear();
 		context.waveformR.clear();
+		context.sourceWaveformL.clear();
+		context.sourceWaveformR.clear();
 		context.clearSelection();
 		context.upToDate = true;  // New score; nothing to save
 
@@ -620,9 +623,12 @@ namespace MikuMikuWorld
 
 	void ScoreEditor::loadMusic(std::string filename)
 	{
+		const bool changingSource = filename != context.workingData.musicFilename;
 		Result result = context.audio.loadMusic(filename);
 		if (result.isOk() || filename.empty())
 		{
+			if (changingSource)
+				context.score.audioTrack.clips.clear();
 			context.workingData.musicFilename = filename;
 		}
 		else
@@ -633,6 +639,41 @@ namespace MikuMikuWorld
 
 			IO::messageBox(APP_NAME, errorMessage, IO::MessageBoxButtons::Ok,
 			               IO::MessageBoxIcon::Error);
+		}
+
+		context.sourceWaveformL.generateMipChainsFromSampleBuffer(context.audio.musicBuffer, 0);
+		context.sourceWaveformR.generateMipChainsFromSampleBuffer(context.audio.musicBuffer, 1);
+
+		const float sourceLengthMs =
+		    context.audio.musicBuffer.isValid()
+		        ? (static_cast<float>(context.audio.musicBuffer.frameCount) /
+		           context.audio.musicBuffer.sampleRate) *
+		              1000.0f
+		        : 0.0f;
+		AudioTrackUtils::ensureDefaultAudioTrack(context.score, filename,
+		                                         context.workingData.musicOffset, sourceLengthMs);
+
+		if (context.audio.musicBuffer.isValid() && AudioTrackUtils::hasAudioTrackEdits(context.score))
+		{
+			AudioTrackUtils::RenderedAudio rendered;
+			Result renderResult =
+			    AudioTrackUtils::renderToBuffer(context.score, context.workingData.musicFilename, rendered);
+			if (renderResult.isOk())
+			{
+				int16_t* samples = rendered.buffer.samples.release();
+				const std::string name = rendered.buffer.name;
+				const ma_uint32 sampleRate = rendered.buffer.sampleRate;
+				const ma_uint32 channelCount = rendered.buffer.channelCount;
+				const ma_uint64 frameCount = rendered.buffer.frameCount;
+				rendered.buffer.dispose();
+				context.audio.loadMusicFromSamples(name, sampleRate, channelCount, frameCount, samples);
+				context.audio.setMusicOffset(0.0f, rendered.timelineStartMs);
+			}
+			else
+			{
+				IO::messageBox(APP_NAME, renderResult.getMessage(), IO::MessageBoxButtons::Ok,
+				               IO::MessageBoxIcon::Warning);
+			}
 		}
 
 		context.waveformL.generateMipChainsFromSampleBuffer(context.audio.musicBuffer, 0);

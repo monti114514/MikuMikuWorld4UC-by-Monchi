@@ -5,9 +5,11 @@
 #include "File.h"
 #include "NoteTypes.h"
 #include "ScoreContext.h"
+#include "AudioTrackUtils.h"
 #include "UI.h"
 #include "Utilities.h"
 #include <climits>
+#include <cmath>
 
 namespace MikuMikuWorld
 {
@@ -78,7 +80,20 @@ namespace MikuMikuWorld
 			UI::addDragFloatProperty(getString("music_offset"), offset, "%.3fms");
 			if (offset != context.workingData.musicOffset)
 			{
+				const float oldOffset = context.workingData.musicOffset;
 				context.workingData.musicOffset = offset;
+				if (context.score.audioTrack.clips.size() == 1)
+				{
+					AudioClip& clip = context.score.audioTrack.clips.front();
+					const bool defaultClip =
+					    std::abs(clip.timelineStartMs - oldOffset) <= 0.01f &&
+					    clip.sourceStartMs <= 0.01f && clip.sourceEndMs < 0.0f &&
+					    clip.fadeInMs <= 0.01f && clip.fadeOutMs <= 0.01f &&
+					    std::abs(clip.gain - 1.0f) <= 0.001f && !clip.muted && !clip.locked &&
+					    clip.visible;
+					if (defaultClip)
+						clip.timelineStartMs = offset;
+				}
 				context.audio.setMusicOffset(context.getTimeAtCurrentTick(), offset);
 			}
 
@@ -2087,6 +2102,7 @@ namespace MikuMikuWorld
 				renameIndex = context.score.layers.size() - 1;
 				layerName = newLayer.name;
 				context.selectedLayer = renameIndex;
+				context.audioLayerSelected = false;
 				focusRenameInput = true;
 			}
 			ImGui::SameLine();
@@ -2101,6 +2117,7 @@ namespace MikuMikuWorld
 				renameIndex = context.score.layers.size() - 1;
 				layerName = newLayer.name;
 				context.selectedLayer = renameIndex;
+				context.audioLayerSelected = false;
 				focusRenameInput = true;
 			}
 			ImGui::SameLine();
@@ -2160,7 +2177,10 @@ namespace MikuMikuWorld
 				}
 				ImGui::Separator();
 			}
-			float windowHeight = ImGui::GetContentRegionAvail().y - ImGui::GetStyle().WindowPadding.y;
+			const float audioLayerSectionHeight = (ImGui::GetFrameHeight() * 2.0f) +
+			                                      ImGui::GetStyle().ItemSpacing.y * 4.0f;
+			float windowHeight = ImGui::GetContentRegionAvail().y - ImGui::GetStyle().WindowPadding.y -
+			                     audioLayerSectionHeight;
 
 			if (ImGui::BeginChild("layers_child_window", ImVec2(-1, windowHeight), true))
 			{
@@ -2189,6 +2209,8 @@ namespace MikuMikuWorld
 					if (ImGui::Selectable((std::string("##row_") + std::to_string(index)).c_str(), isSelected, ImGuiSelectableFlags_AllowItemOverlap, ImVec2(width, layersButtonHeight)))
 					{
 						context.selectedLayer = index;
+						context.audioLayerSelected = false;
+						context.selectedAudioClip = static_cast<id_t>(-1);
 					}
 
 					if (isSelected) ImGui::PopStyleColor(2);
@@ -2339,6 +2361,58 @@ namespace MikuMikuWorld
 				}
 			}
 			ImGui::EndChild();
+
+			ImGui::Separator();
+			ImGui::TextUnformatted("音源レイヤー");
+			ImVec2 audioStartPos = ImGui::GetCursorScreenPos();
+			float audioWidth = ImGui::GetContentRegionAvail().x;
+			const bool audioSelected = context.audioLayerSelected;
+			if (audioSelected)
+			{
+				ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
+				ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
+			}
+			if (ImGui::Selectable("##audio_layer_bgm", audioSelected,
+			                      ImGuiSelectableFlags_AllowItemOverlap,
+			                      ImVec2(audioWidth, layersButtonHeight)))
+			{
+				context.audioLayerSelected = true;
+				context.clearSelection();
+			}
+			if (audioSelected)
+				ImGui::PopStyleColor(2);
+
+			ImGui::SetCursorScreenPos(ImVec2(audioStartPos.x + ImGui::GetStyle().FramePadding.x,
+			                                 audioStartPos.y));
+			ImGui::AlignTextToFramePadding();
+			ImGui::Text("%s", context.score.audioTrack.name.empty()
+			                    ? "BGM"
+			                    : context.score.audioTrack.name.c_str());
+			ImGui::SameLine(audioWidth - (UI::btnSmall.x * 3 + ImGui::GetStyle().ItemSpacing.x * 2));
+			if (UI::transparentButton(context.score.audioTrack.visible ? ICON_FA_EYE : ICON_FA_EYE_SLASH,
+			                          ImVec2(UI::btnSmall.x, layersButtonHeight), false))
+			{
+				Score prev = context.score;
+				context.score.audioTrack.visible = !context.score.audioTrack.visible;
+				context.pushHistory("Toggle Audio Layer Visibility", prev, context.score);
+			}
+			ImGui::SameLine();
+			if (UI::transparentButton(context.score.audioTrack.locked ? ICON_FA_LOCK : ICON_FA_LOCK_OPEN,
+			                          ImVec2(UI::btnSmall.x, layersButtonHeight), false))
+			{
+				Score prev = context.score;
+				context.score.audioTrack.locked = !context.score.audioTrack.locked;
+				context.pushHistory("Toggle Audio Layer Lock", prev, context.score);
+			}
+			ImGui::SameLine();
+			if (UI::transparentButton(context.score.audioTrack.muted ? ICON_FA_VOLUME_MUTE : ICON_FA_VOLUME_UP,
+			                          ImVec2(UI::btnSmall.x, layersButtonHeight), false))
+			{
+				Score prev = context.score;
+				context.score.audioTrack.muted = !context.score.audioTrack.muted;
+				context.pushHistory("Toggle Audio Layer Mute", prev, context.score);
+			}
+
 			ImGui::PopStyleColor();
 
 			if (dragDropFrom != -1 && dragDropTo != -1)

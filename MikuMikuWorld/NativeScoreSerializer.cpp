@@ -1,6 +1,7 @@
 #include "NativeScoreSerializer.h"
 #include <algorithm>
 #include <cctype>
+#include <cmath>
 
 namespace MikuMikuWorld
 {
@@ -31,6 +32,8 @@ namespace MikuMikuWorld
 	const char* MCH_MMWS_SIGNATURE = "MCHMMWS";
 	const int MCH_LAYER_EXTENSION_VERSION = 1;
 	const char* MCH_LAYER_EXTENSION_SIGNATURE = "MCH_LAYER_EXT";
+	const int MCH_AUDIO_EXTENSION_VERSION = 1;
+	const char* MCH_AUDIO_EXTENSION_SIGNATURE = "MCH_AUDIO_EXT";
 
 	enum NoteFlags
 	{
@@ -69,6 +72,20 @@ namespace MikuMikuWorld
 		LAYER_IS_FOLDER = 1 << 1,
 		LAYER_IN_FOLDER = 1 << 2,
 		LAYER_IS_COLLAPSED = 1 << 3
+	};
+
+	enum AudioTrackFlags
+	{
+		AUDIO_TRACK_MUTED = 1 << 0,
+		AUDIO_TRACK_LOCKED = 1 << 1,
+		AUDIO_TRACK_VISIBLE = 1 << 2
+	};
+
+	enum AudioClipFlags
+	{
+		AUDIO_CLIP_MUTED = 1 << 0,
+		AUDIO_CLIP_LOCKED = 1 << 1,
+		AUDIO_CLIP_VISIBLE = 1 << 2
 	};
 
 	struct NativeScoreSerializer::ScoreVersion
@@ -168,6 +185,44 @@ namespace MikuMikuWorld
 			layer.isFolder = (flags & LAYER_IS_FOLDER) != 0;
 			layer.inFolder = (flags & LAYER_IN_FOLDER) != 0;
 			layer.isCollapsed = (flags & LAYER_IS_COLLAPSED) != 0;
+		}
+
+		unsigned int toAudioTrackFlags(const AudioTrack& track)
+		{
+			unsigned int flags = 0;
+			if (track.muted)
+				flags |= AUDIO_TRACK_MUTED;
+			if (track.locked)
+				flags |= AUDIO_TRACK_LOCKED;
+			if (track.visible)
+				flags |= AUDIO_TRACK_VISIBLE;
+			return flags;
+		}
+
+		void applyAudioTrackFlags(AudioTrack& track, unsigned int flags)
+		{
+			track.muted = (flags & AUDIO_TRACK_MUTED) != 0;
+			track.locked = (flags & AUDIO_TRACK_LOCKED) != 0;
+			track.visible = (flags & AUDIO_TRACK_VISIBLE) != 0;
+		}
+
+		unsigned int toAudioClipFlags(const AudioClip& clip)
+		{
+			unsigned int flags = 0;
+			if (clip.muted)
+				flags |= AUDIO_CLIP_MUTED;
+			if (clip.locked)
+				flags |= AUDIO_CLIP_LOCKED;
+			if (clip.visible)
+				flags |= AUDIO_CLIP_VISIBLE;
+			return flags;
+		}
+
+		void applyAudioClipFlags(AudioClip& clip, unsigned int flags)
+		{
+			clip.muted = (flags & AUDIO_CLIP_MUTED) != 0;
+			clip.locked = (flags & AUDIO_CLIP_LOCKED) != 0;
+			clip.visible = (flags & AUDIO_CLIP_VISIBLE) != 0;
 		}
 
 		std::string toLowerExtension(const std::string& filename)
@@ -729,7 +784,7 @@ namespace MikuMikuWorld
 				score.layers.push_back({ name, forceNoteSpeed });
 			}
 
-			if (version.isMonchiNative() && reader.getStreamPosition() < waypointsAddress)
+			while (version.isMonchiNative() && reader.getStreamPosition() < waypointsAddress)
 			{
 				std::string extensionSignature = reader.readString();
 				if (extensionSignature == MCH_LAYER_EXTENSION_SIGNATURE)
@@ -748,6 +803,37 @@ namespace MikuMikuWorld
 								applyLayerFlags(score.layers[i], flags);
 						}
 					}
+				}
+				else if (extensionSignature == MCH_AUDIO_EXTENSION_SIGNATURE)
+				{
+					int extensionVersion = reader.readUInt32();
+					if (extensionVersion <= MCH_AUDIO_EXTENSION_VERSION)
+					{
+						score.audioTrack = AudioTrack{};
+						applyAudioTrackFlags(score.audioTrack, reader.readUInt32());
+						score.audioTrack.name = reader.readString();
+						int clipCount = reader.readUInt32();
+						score.audioTrack.clips.reserve(clipCount);
+						for (int i = 0; i < clipCount && reader.getStreamPosition() < waypointsAddress;
+						     ++i)
+						{
+							AudioClip clip;
+							clip.ID = reader.readInt32();
+							clip.sourceFile = reader.readString();
+							clip.sourceStartMs = reader.readSingle();
+							clip.sourceEndMs = reader.readSingle();
+							clip.timelineStartMs = reader.readSingle();
+							clip.fadeInMs = reader.readSingle();
+							clip.fadeOutMs = reader.readSingle();
+							clip.gain = reader.readSingle();
+							applyAudioClipFlags(clip, reader.readUInt32());
+							score.audioTrack.clips.push_back(clip);
+						}
+					}
+				}
+				else
+				{
+					break;
 				}
 			}
 		}
@@ -890,6 +976,24 @@ namespace MikuMikuWorld
 		for (const auto& layer : score.layers)
 		{
 			writer.writeInt32(toLayerFlags(layer));
+		}
+
+		writer.writeString(MCH_AUDIO_EXTENSION_SIGNATURE);
+		writer.writeInt32(MCH_AUDIO_EXTENSION_VERSION);
+		writer.writeInt32(toAudioTrackFlags(score.audioTrack));
+		writer.writeString(score.audioTrack.name);
+		writer.writeInt32(score.audioTrack.clips.size());
+		for (const auto& clip : score.audioTrack.clips)
+		{
+			writer.writeInt32(clip.ID);
+			writer.writeString(clip.sourceFile);
+			writer.writeSingle(clip.sourceStartMs);
+			writer.writeSingle(clip.sourceEndMs);
+			writer.writeSingle(clip.timelineStartMs);
+			writer.writeSingle(clip.fadeInMs);
+			writer.writeSingle(clip.fadeOutMs);
+			writer.writeSingle(clip.gain);
+			writer.writeInt32(toAudioClipFlags(clip));
 		}
 
 		waypointsAddress = writer.getStreamPosition();
@@ -1044,9 +1148,30 @@ namespace MikuMikuWorld
 
 	bool NativeScoreSerializer::hasMonchiNativeOnlyData(const Score& score)
 	{
-		return std::any_of(score.layers.begin(), score.layers.end(), [](const Layer& layer)
+		if (std::any_of(score.layers.begin(), score.layers.end(), [](const Layer& layer)
 		{
 			return layer.hidden || layer.isFolder || layer.inFolder || layer.isCollapsed;
-		});
+		}))
+			return true;
+
+		if (score.audioTrack.muted || score.audioTrack.locked || !score.audioTrack.visible)
+			return true;
+		if (score.audioTrack.clips.size() > 1)
+			return true;
+		for (const AudioClip& clip : score.audioTrack.clips)
+		{
+			if (clip.muted || clip.locked || !clip.visible)
+				return true;
+			if (clip.sourceStartMs > 0.01f || clip.fadeInMs > 0.01f ||
+			    clip.fadeOutMs > 0.01f || std::abs(clip.gain - 1.0f) > 0.001f)
+				return true;
+			if (std::abs(clip.timelineStartMs - score.metadata.musicOffset) > 0.01f)
+				return true;
+			if (!clip.sourceFile.empty() && clip.sourceFile != score.metadata.musicFile)
+				return true;
+			if (clip.sourceEndMs >= 0.0f)
+				return true;
+		}
+		return false;
 	}
 }

@@ -132,6 +132,8 @@
       <Command>
 			xcopy "$(ProjectDir)res\" "$(OutDir)res\" /E /Y
 			xcopy "$(ProjectDir)\..\Depends\openssl\bin\*.dll" "$(OutDir)" /E /Y
+			if exist "$(ProjectDir)\..\Depends\ffmpeg\bin\ffmpeg.exe" xcopy "$(ProjectDir)\..\Depends\ffmpeg\bin\ffmpeg.exe" "$(OutDir)tools\" /I /Y
+			if exist "$(ProjectDir)\..\Depends\ffmpeg\README.txt" xcopy "$(ProjectDir)\..\Depends\ffmpeg\README.txt" "$(OutDir)tools\" /I /Y
 		</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
@@ -161,9 +163,11 @@
       <AdditionalManifestDependencies>type='win32' name='Microsoft.Windows.Common-Controls' version='6.0.0.0' processorArchitecture='amd64' publicKeyToken='6595b64144ccf1df' language='*'</AdditionalManifestDependencies>
     </Link>
     <PostBuildEvent>
-      <Command>
+		<Command>
 			xcopy "$(ProjectDir)res\" "$(OutDir)res\" /E /Y
 			xcopy "$(ProjectDir)\..\Depends\openssl\bin\*.dll" "$(OutDir)" /E /Y
+			if exist "$(ProjectDir)\..\Depends\ffmpeg\bin\ffmpeg.exe" xcopy "$(ProjectDir)\..\Depends\ffmpeg\bin\ffmpeg.exe" "$(OutDir)tools\" /I /Y
+			if exist "$(ProjectDir)\..\Depends\ffmpeg\README.txt" xcopy "$(ProjectDir)\..\Depends\ffmpeg\README.txt" "$(OutDir)tools\" /I /Y
 		</Command>
     </PostBuildEvent>
   </ItemDefinitionGroup>
@@ -174,6 +178,7 @@
     <ClCompile Include="ApplicationConfiguration.cpp" />
     <ClCompile Include="Audio\Sound.cpp" />
     <ClCompile Include="Audio\AudioManager.cpp" />
+    <ClCompile Include="AudioTrackUtils.cpp" />
     <ClCompile Include="Background.cpp" />
     <ClCompile Include="BinaryReader.cpp" />
     <ClCompile Include="BinaryWriter.cpp" />
@@ -239,6 +244,7 @@
     <ClInclude Include="ApplicationConfiguration.h" />
     <ClInclude Include="Audio\Sound.h" />
     <ClInclude Include="Audio\AudioManager.h" />
+    <ClInclude Include="AudioTrackUtils.h" />
     <ClInclude Include="Background.h" />
     <ClInclude Include="BinaryReader.h" />
     <ClInclude Include="BinaryWriter.h" />

@@ -6,6 +6,7 @@
 #include "ResourceManager.h"
 #include "Tempo.h"
 #include "Score.h"
+#include "AudioTrackUtils.h"
 #include "UI.h"
 #include "Utilities.h"
 #include <algorithm>
@@ -1249,6 +1250,7 @@ namespace MikuMikuWorld
 
 		if (config.drawWaveform)
 			drawWaveform(context);
+		drawAudioTrack(context);
 
 		// Draw lanes
 		for (int l = 0; l <= NUM_LANES; ++l)
@@ -1368,6 +1370,7 @@ namespace MikuMikuWorld
 		hoverLane = positionToLane(mousePos.x);
 		hoveringNote = -1;
 		isHoveringNote = false;
+		updateAudioTrackEditing(context);
 
 		// Draw cursor behind notes
 		const float y = position.y - tickToPosition(context.currentTick) + visualOffset;
@@ -3948,7 +3951,7 @@ namespace MikuMikuWorld
 		}
 	}
 
-	ScoreEditorTimeline::ScoreEditorTimeline()
+		ScoreEditorTimeline::ScoreEditorTimeline()
 	{
 		framebuffer = std::make_unique<Framebuffer>(1920, 1080);
 		playbackSpeed = 1.0f;
@@ -3959,6 +3962,38 @@ namespace MikuMikuWorld
 		background.setBrightness(0.67);
 
 		timelineInstance = this;
+	}
+
+	static void refreshTimelineAudioFromTrack(ScoreContext& context)
+	{
+		if (context.workingData.musicFilename.empty())
+			return;
+
+		if (AudioTrackUtils::hasAudioTrackEdits(context.score))
+		{
+			AudioTrackUtils::RenderedAudio rendered;
+			Result renderResult =
+			    AudioTrackUtils::renderToBuffer(context.score, context.workingData.musicFilename, rendered);
+			if (!renderResult.isOk())
+				return;
+
+			int16_t* samples = rendered.buffer.samples.release();
+			const std::string name = rendered.buffer.name;
+			const ma_uint32 sampleRate = rendered.buffer.sampleRate;
+			const ma_uint32 channelCount = rendered.buffer.channelCount;
+			const ma_uint64 frameCount = rendered.buffer.frameCount;
+			rendered.buffer.dispose();
+			context.audio.loadMusicFromSamples(name, sampleRate, channelCount, frameCount, samples);
+			context.audio.setMusicOffset(0.0f, rendered.timelineStartMs);
+		}
+		else
+		{
+			context.audio.loadMusic(context.workingData.musicFilename);
+			context.audio.setMusicOffset(0.0f, context.workingData.musicOffset);
+		}
+
+		context.waveformL.generateMipChainsFromSampleBuffer(context.audio.musicBuffer, 0);
+		context.waveformR.generateMipChainsFromSampleBuffer(context.audio.musicBuffer, 1);
 	}
 
 	void ScoreEditorTimeline::setPlaybackSpeed(ScoreContext& context, float speed)
@@ -4126,6 +4161,213 @@ namespace MikuMikuWorld
 		}
 	}
 
+	ImRect ScoreEditorTimeline::getAudioClipRect(ScoreContext& context, const AudioClip& clip) const
+	{
+		const float sourceEndMs =
+		    clip.sourceEndMs >= 0.0f
+		        ? clip.sourceEndMs
+		        : static_cast<float>(context.sourceWaveformL.durationInSeconds * 1000.0);
+		const float durationMs = std::max(1.0f, sourceEndMs - clip.sourceStartMs);
+		const int startTick = accumulateTicks(clip.timelineStartMs / 1000.0f, TICKS_PER_BEAT,
+		                                      context.score.tempoChanges);
+		const int endTick = accumulateTicks((clip.timelineStartMs + durationMs) / 1000.0f,
+		                                    TICKS_PER_BEAT, context.score.tempoChanges);
+		const float y1 = position.y - tickToPosition(startTick) + visualOffset;
+		const float y2 = position.y - tickToPosition(endTick) + visualOffset;
+		const float x1 = getTimelineStartX(context) + 8.0f;
+		const float x2 = getTimelineEndX(context) - 8.0f;
+		return ImRect(ImVec2(x1, std::min(y1, y2)), ImVec2(x2, std::max(y1, y2)));
+	}
+
+	void ScoreEditorTimeline::drawAudioTrack(ScoreContext& context)
+	{
+		if (!context.score.audioTrack.visible)
+			return;
+
+		ImDrawList* drawList = ImGui::GetWindowDrawList();
+		if (!drawList)
+			return;
+
+		for (const AudioClip& clip : context.score.audioTrack.clips)
+		{
+			if (!clip.visible)
+				continue;
+
+			const ImRect rect = getAudioClipRect(context, clip);
+			if (rect.Max.y < position.y || rect.Min.y > position.y + size.y)
+				continue;
+
+			const bool selected = context.selectedAudioClip == clip.ID;
+			const ImU32 fillColor =
+			    context.audioLayerSelected ? (selected ? IM_COL32(80, 160, 255, 70)
+			                                           : IM_COL32(80, 160, 255, 38))
+			                               : IM_COL32(80, 160, 255, 20);
+			const ImU32 borderColor =
+			    selected ? IM_COL32(150, 210, 255, 220) : IM_COL32(110, 175, 230, 120);
+			drawList->AddRectFilled(rect.Min, rect.Max, fillColor, 4.0f);
+			drawList->AddRect(rect.Min, rect.Max, borderColor, 4.0f, 0,
+			                  context.audioLayerSelected ? 2.0f : 1.0f);
+
+			if (context.audioLayerSelected)
+			{
+				const float handleHeight = 8.0f;
+				drawList->AddRectFilled(rect.Min, ImVec2(rect.Max.x, rect.Min.y + handleHeight),
+				                        IM_COL32(150, 210, 255, 90), 4.0f);
+				drawList->AddRectFilled(ImVec2(rect.Min.x, rect.Max.y - handleHeight), rect.Max,
+				                        IM_COL32(150, 210, 255, 90), 4.0f);
+
+				const float fadeInPixels =
+				    static_cast<float>((clip.fadeInMs / 1000.0f / waveformSecondsPerPixel) * zoom);
+				const float fadeOutPixels =
+				    static_cast<float>((clip.fadeOutMs / 1000.0f / waveformSecondsPerPixel) * zoom);
+				const float fadeInY = rect.Min.y + std::min(rect.GetHeight(), fadeInPixels);
+				const float fadeOutY = rect.Max.y - std::min(rect.GetHeight(), fadeOutPixels);
+				drawList->AddLine(ImVec2(rect.Min.x, fadeInY), ImVec2(rect.Max.x, rect.Min.y),
+				                  IM_COL32(255, 255, 255, 90), 1.0f);
+				drawList->AddLine(ImVec2(rect.Min.x, rect.Max.y), ImVec2(rect.Max.x, fadeOutY),
+				                  IM_COL32(255, 255, 255, 90), 1.0f);
+			}
+		}
+	}
+
+	void ScoreEditorTimeline::updateAudioTrackEditing(ScoreContext& context)
+	{
+		if (!context.audioLayerSelected || context.score.audioTrack.locked)
+			return;
+
+		const ImGuiIO& io = ImGui::GetIO();
+		const float currentTimelineMs =
+		    static_cast<float>(accumulateDuration(hoverTick, TICKS_PER_BEAT,
+		                                          context.score.tempoChanges) *
+		                       1000.0);
+		const bool snapDisabled = io.KeyShift;
+
+		auto findClip = [&](id_t id) -> AudioClip*
+		{
+			for (AudioClip& clip : context.score.audioTrack.clips)
+			{
+				if (clip.ID == id)
+					return &clip;
+			}
+			return nullptr;
+		};
+
+		if (ImGui::IsKeyPressed(ImGuiKey_Delete) &&
+		    context.selectedAudioClip != static_cast<id_t>(-1))
+		{
+			Score prev = context.score;
+			auto& clips = context.score.audioTrack.clips;
+			clips.erase(std::remove_if(clips.begin(), clips.end(),
+			                           [&](const AudioClip& clip)
+			                           { return clip.ID == context.selectedAudioClip; }),
+			            clips.end());
+			context.selectedAudioClip = static_cast<id_t>(-1);
+			context.pushHistory("Delete Audio Clip", prev, context.score);
+			refreshTimelineAudioFromTrack(context);
+			return;
+		}
+
+		if (audioDragMode == AudioDragMode::None)
+		{
+			for (AudioClip& clip : context.score.audioTrack.clips)
+			{
+				if (clip.locked)
+					continue;
+
+				const ImRect rect = getAudioClipRect(context, clip);
+				if (!rect.Contains(io.MousePos))
+					continue;
+
+				if (ImGui::IsMouseClicked(ImGuiMouseButton_Left))
+				{
+					context.clearSelection();
+					context.audioLayerSelected = true;
+					context.selectedAudioClip = clip.ID;
+					draggingAudioClip = clip.ID;
+					audioDragStartClip = clip;
+					audioDragStartScore = context.score;
+					audioDragStartTimelineMs = currentTimelineMs;
+
+					const float edgeThreshold = 8.0f;
+					if (std::abs(io.MousePos.y - rect.Min.y) <= edgeThreshold)
+						audioDragMode = AudioDragMode::TrimEnd;
+					else if (std::abs(io.MousePos.y - rect.Max.y) <= edgeThreshold)
+						audioDragMode = AudioDragMode::TrimStart;
+					else if (io.MousePos.x < rect.Min.x + 24.0f)
+						audioDragMode = AudioDragMode::FadeIn;
+					else if (io.MousePos.x > rect.Max.x - 24.0f)
+						audioDragMode = AudioDragMode::FadeOut;
+					else
+						audioDragMode = AudioDragMode::Move;
+					break;
+				}
+			}
+		}
+
+		if (audioDragMode != AudioDragMode::None)
+		{
+			AudioClip* clip = findClip(draggingAudioClip);
+			if (!clip)
+			{
+				audioDragMode = AudioDragMode::None;
+				return;
+			}
+
+			const float deltaMs = currentTimelineMs - audioDragStartTimelineMs;
+			switch (audioDragMode)
+			{
+			case AudioDragMode::Move:
+				clip->timelineStartMs = audioDragStartClip.timelineStartMs + deltaMs;
+				break;
+			case AudioDragMode::TrimStart:
+			{
+				const float maxTrim =
+				    std::max(0.0f, (clip->sourceEndMs < 0.0f ? audioDragStartClip.sourceEndMs
+				                                             : clip->sourceEndMs) -
+				                         1.0f);
+				const float newStart = std::clamp(audioDragStartClip.sourceStartMs + deltaMs,
+				                                  0.0f, maxTrim);
+				const float trimDelta = newStart - clip->sourceStartMs;
+				clip->sourceStartMs = newStart;
+				clip->timelineStartMs += trimDelta;
+				break;
+			}
+			case AudioDragMode::TrimEnd:
+				clip->sourceEndMs =
+				    std::max(clip->sourceStartMs + 1.0f, audioDragStartClip.sourceEndMs + deltaMs);
+				break;
+			case AudioDragMode::FadeIn:
+				clip->fadeInMs = std::max(0.0f, audioDragStartClip.fadeInMs + deltaMs);
+				break;
+			case AudioDragMode::FadeOut:
+				clip->fadeOutMs = std::max(0.0f, audioDragStartClip.fadeOutMs - deltaMs);
+				break;
+			default:
+				break;
+			}
+
+			if (!snapDisabled && audioDragMode == AudioDragMode::Move)
+			{
+				const int snappedTick = snapTick(
+				    accumulateTicks(clip->timelineStartMs / 1000.0f, TICKS_PER_BEAT,
+				                    context.score.tempoChanges),
+				    division);
+				clip->timelineStartMs =
+				    static_cast<float>(accumulateDuration(snappedTick, TICKS_PER_BEAT,
+				                                          context.score.tempoChanges) *
+				                       1000.0);
+			}
+
+			if (ImGui::IsMouseReleased(ImGuiMouseButton_Left))
+			{
+				context.pushHistory("Edit Audio Clip", audioDragStartScore, context.score);
+				refreshTimelineAudioFromTrack(context);
+				audioDragMode = AudioDragMode::None;
+				draggingAudioClip = static_cast<id_t>(-1);
+			}
+		}
+	}
+
 	void ScoreEditorTimeline::drawWaveform(ScoreContext& context)
 	{
 		ImDrawList* drawList = ImGui::GetWindowDrawList();
@@ -4146,7 +4388,9 @@ namespace MikuMikuWorld
 		{
 			const bool rightChannel = index == 1;
 			const Audio::WaveformMipChain& waveform =
-			    rightChannel ? context.waveformR : context.waveformL;
+			    context.audioLayerSelected
+			        ? (rightChannel ? context.sourceWaveformR : context.sourceWaveformL)
+			        : (rightChannel ? context.waveformR : context.waveformL);
 			if (waveform.isEmpty())
 				continue;
 

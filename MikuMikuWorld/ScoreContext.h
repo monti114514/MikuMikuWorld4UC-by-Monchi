@@ -128,17 +128,20 @@ namespace MikuMikuWorld
 		std::set<SelectedMetaEvent> selectedMetaEvents;
 
 		Audio::WaveformMipChain waveformL, waveformR;
+		Audio::WaveformMipChain sourceWaveformL, sourceWaveformR;
 
 		int currentTick{};
 		bool upToDate{ true };
 
 		int selectedLayer = 0;
 		bool showAllLayers = false;
+		bool audioLayerSelected = false;
+		id_t selectedAudioClip = static_cast<id_t>(-1);
 
 		bool hasSelection() const
 		{
 			return selectedNotes.size() > 0 || selectedHiSpeedChanges.size() > 0 ||
-			       selectedMetaEvents.size() > 0;
+			       selectedMetaEvents.size() > 0 || selectedAudioClip != static_cast<id_t>(-1);
 		}
 
 		bool hasHoldInSelection() const
@@ -195,6 +198,7 @@ namespace MikuMikuWorld
 			selectedNotes.clear();
 			selectedHiSpeedChanges.clear();
 			selectedMetaEvents.clear();
+			selectedAudioClip = static_cast<id_t>(-1);
 		}
 		bool isMetaEventSelected(const SelectedMetaEvent& event) const;
 		void selectMetaEvent(const SelectedMetaEvent& event, bool additive);

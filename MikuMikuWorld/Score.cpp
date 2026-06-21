@@ -15,6 +15,7 @@ namespace MikuMikuWorld
 	id_t nextHiSpeedID = 1;
 	id_t nextTempoRuntimeID = 1;
 	id_t nextWaypointRuntimeID = 1;
+	id_t nextAudioClipID = 1;
 	id_t getNextSkillID()
 	{
 		uint8_t data[sizeof(id_t)];
@@ -44,6 +45,14 @@ namespace MikuMikuWorld
 		std::memcpy(data, &nextWaypointRuntimeID, sizeof(id_t));
 		nextWaypointRuntimeID = choc::hash::xxHash64::hash(&data, sizeof(id_t), HASH_SEED + 5);
 		return nextWaypointRuntimeID;
+	}
+
+	id_t getNextAudioClipID()
+	{
+		uint8_t data[sizeof(id_t)];
+		std::memcpy(data, &nextAudioClipID, sizeof(id_t));
+		nextAudioClipID = choc::hash::xxHash64::hash(&data, sizeof(id_t), HASH_SEED + 6);
+		return nextAudioClipID;
 	}
 
 	Score::Score()

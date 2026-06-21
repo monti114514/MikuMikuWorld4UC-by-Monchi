@@ -14,6 +14,7 @@ namespace MikuMikuWorld
 	id_t getNextHiSpeedID();
 	id_t getNextTempoRuntimeID();
 	id_t getNextWaypointRuntimeID();
+	id_t getNextAudioClipID();
 
 	enum class SkillEffect : uint8_t
 	{
@@ -84,6 +85,30 @@ namespace MikuMikuWorld
 		int baseLifePoint = 1000;
 	};
 
+	struct AudioClip
+	{
+		id_t ID = static_cast<id_t>(-1);
+		std::string sourceFile;
+		float sourceStartMs = 0.0f;
+		float sourceEndMs = -1.0f;
+		float timelineStartMs = 0.0f;
+		float fadeInMs = 0.0f;
+		float fadeOutMs = 0.0f;
+		float gain = 1.0f;
+		bool muted = false;
+		bool locked = false;
+		bool visible = true;
+	};
+
+	struct AudioTrack
+	{
+		std::string name = "BGM";
+		bool muted = false;
+		bool locked = false;
+		bool visible = true;
+		std::vector<AudioClip> clips;
+	};
+
 	struct Score
 	{
 		ScoreMetadata metadata;
@@ -97,6 +122,7 @@ namespace MikuMikuWorld
 
 		std::vector<Layer> layers{ { Layer{ "default" } } };
 		std::vector<Waypoint> waypoints;
+		AudioTrack audioTrack;
 
 		Score();
 	};

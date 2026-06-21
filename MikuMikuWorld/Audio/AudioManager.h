@@ -46,6 +46,9 @@ namespace Audio
 
 		void loadSoundEffects();
 		MikuMikuWorld::Result loadMusic(const std::string& filename);
+		MikuMikuWorld::Result loadMusicFromSamples(const std::string& name, ma_uint32 sampleRate,
+		                                           ma_uint32 channelCount, ma_uint64 frameCount,
+		                                           int16_t* samples);
 
 		void setMasterVolume(float volume);
 		float getMasterVolume() const;

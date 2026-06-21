@@ -152,6 +152,21 @@ namespace Audio
 		return result;
 	}
 
+	mmw::Result AudioManager::loadMusicFromSamples(const std::string& name, ma_uint32 sampleRate,
+	                                               ma_uint32 channelCount, ma_uint64 frameCount,
+	                                               int16_t* samples)
+	{
+		disposeMusic();
+		if (samples == nullptr || sampleRate == 0 || channelCount == 0 || frameCount == 0)
+			return mmw::Result(mmw::ResultStatus::Error, "Invalid rendered audio buffer");
+
+		musicBuffer.initialize(name, sampleRate, channelCount, frameCount, samples);
+		ma_sound_init_from_data_source(&engine, &musicBuffer.buffer, MA_SOUND_FLAG_NO_SPATIALIZATION,
+		                               &musicGroup, &music);
+		setPlaybackSpeed(playbackSpeed, 0);
+		return mmw::Result::Ok();
+	}
+
 	void AudioManager::playMusic(float currentTime)
 	{
 		ma_uint64 length{};
