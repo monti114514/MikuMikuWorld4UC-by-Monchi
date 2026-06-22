@@ -386,7 +386,6 @@ namespace MikuMikuWorld
 		if (!curr.size())
 			curr = items[value];
 		bool act = false;
-		ImDrawList* drawList = ImGui::GetWindowDrawList();
 		const bool comboOpen = ImGui::BeginCombo(id, "");
 		const ImVec2 comboMin = ImGui::GetItemRectMin();
 		const ImVec2 comboMax = ImGui::GetItemRectMax();
@@ -414,8 +413,8 @@ namespace MikuMikuWorld
 		const float textStartX =
 		    comboMin.x + std::max(0.0f, ((comboMax.x - comboMin.x - arrowWidth) - textSize.x) * 0.5f);
 		const float textStartY = comboMin.y + ((comboMax.y - comboMin.y) - textSize.y) * 0.5f;
-		drawList->AddText(ImVec2(textStartX, textStartY), ImGui::GetColorU32(ImGuiCol_Text),
-		                  curr.c_str());
+		ImGui::GetForegroundDrawList()->AddText(ImVec2(textStartX, textStartY),
+		                                        ImGui::GetColorU32(ImGuiCol_Text), curr.c_str());
 
 		if (comboHovered)
 		{

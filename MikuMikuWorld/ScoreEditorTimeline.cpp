@@ -1528,11 +1528,20 @@ namespace MikuMikuWorld
 		auto editTargetButton = [&](TimelineEditTarget target, const char* labelKey)
 		{
 			const bool selected = context.timelineEditTarget == target;
-			if (selected)
-				ImGui::PushStyleColor(ImGuiCol_Button,
-				                      ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
+			ImGui::PushStyleColor(ImGuiCol_Button,
+			                      selected ? ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive)
+			                               : ImGui::GetStyleColorVec4(ImGuiCol_FrameBg));
+			ImGui::PushStyleColor(ImGuiCol_ButtonHovered,
+			                      selected ? ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive)
+			                               : ImGui::GetStyleColorVec4(ImGuiCol_ButtonHovered));
+			ImGui::PushStyleColor(ImGuiCol_ButtonActive,
+			                      ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
+			// ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 1.0f);
 
-			if (ImGui::Button(getString(labelKey), ImVec2(0.0f, UI::btnSmall.y)))
+			const char* label = getString(labelKey);
+			const float width =
+			    std::max(68.0f, ImGui::CalcTextSize(label).x + ImGui::GetStyle().FramePadding.x * 2.0f);
+			if (ImGui::Button(label, ImVec2(width, UI::btnSmall.y)))
 			{
 				if (context.timelineEditTarget != target)
 				{
@@ -1543,16 +1552,20 @@ namespace MikuMikuWorld
 				}
 			}
 
-			if (selected)
-				ImGui::PopStyleColor();
+			//ImGui::PopStyleVar();
+			ImGui::PopStyleColor(3);
+			//ImGui::ShowStyleEditor();
 		};
 
 		ImGui::SameLine(0.0f, 18.0f);
 		ImGui::TextUnformatted(getString("edit_target"));
 		ImGui::SameLine();
+		ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing,
+		                    ImVec2(0.0f, ImGui::GetStyle().ItemSpacing.y));
 		editTargetButton(TimelineEditTarget::Notes, "edit_target_notes");
-		ImGui::SameLine(0.0f, 0.0f);
+		ImGui::SameLine();
 		editTargetButton(TimelineEditTarget::Audio, "edit_target_audio");
+		ImGui::PopStyleVar();
 
 		ImGui::PopStyleColor();
 
