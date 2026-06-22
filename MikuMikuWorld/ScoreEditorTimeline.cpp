@@ -878,13 +878,14 @@ namespace MikuMikuWorld
 		if (suppressTimelineContextMenu || ImGui::IsPopupOpen("audio_clip_context"))
 			return;
 
-		if (context.audioLayerSelected)
+		if (context.isAudioEditing())
 		{
 			for (const AudioClip& clip : context.score.audioTrack.clips)
 			{
 				if (clip.visible && getAudioClipRect(context, clip).Contains(ImGui::GetIO().MousePos))
 					return;
 			}
+			return;
 		}
 
 		if (ImGui::BeginPopupContextWindow(IMGUI_TITLE(ICON_FA_MUSIC, "notes_timeline")))
@@ -1133,7 +1134,7 @@ namespace MikuMikuWorld
 				          (io.KeyShift ? config.scrollSpeedShift : config.scrollSpeedNormal);
 			}
 
-			if (!context.audioLayerSelected && !isHoveringNote && !isHoldingNote &&
+			if (context.isNotesEditing() && !isHoveringNote && !isHoldingNote &&
 			    !isHoldingMetaEvent && !insertingHold && !pasting &&
 			    currentMode == TimelineMode::Select)
 			{
@@ -1162,7 +1163,7 @@ namespace MikuMikuWorld
 
 		// Selection rectangle
 		// Draw selection rectangle after notes are rendered
-		if (dragging && ImGui::IsMouseReleased(0) && !pasting && !context.audioLayerSelected)
+		if (dragging && ImGui::IsMouseReleased(0) && !pasting && context.isNotesEditing())
 		{
 			// Calculate drag selection
 			float left = std::min(dragStart.x, mousePos.x);
@@ -1242,7 +1243,7 @@ namespace MikuMikuWorld
 
 			dragging = false;
 		}
-		else if (dragging && ImGui::IsMouseReleased(0) && context.audioLayerSelected)
+		else if (dragging && ImGui::IsMouseReleased(0) && context.isAudioEditing())
 		{
 			dragging = false;
 		}
@@ -1266,7 +1267,8 @@ namespace MikuMikuWorld
 		    Color::abgrToInt(std::clamp((int)(config.laneOpacity * 255), 0, 255), 0x1c, 0x1a,
 		                     0x0f));
 
-		if (config.drawWaveform && !AudioTrackUtils::hasAudioTrackData(context.score))
+		if ((config.drawWaveform || context.isAudioEditing()) &&
+		    !AudioTrackUtils::hasAudioTrackData(context.score))
 			drawWaveform(context);
 		drawAudioTrack(context);
 
@@ -1455,23 +1457,26 @@ namespace MikuMikuWorld
 		}
 
 		// Selection boxes
-		for (id_t id : context.selectedNotes)
+		if (context.isNotesEditing())
 		{
-			const Note& note = context.score.notes.at(id);
-			if (!isNoteVisible(note, 0))
-				continue;
+			for (id_t id : context.selectedNotes)
+			{
+				const Note& note = context.score.notes.at(id);
+				if (!isNoteVisible(note, 0))
+					continue;
 
-			float x = position.x;
-			float y = position.y - tickToPosition(note.tick) + visualOffset;
+				float x = position.x;
+				float y = position.y - tickToPosition(note.tick) + visualOffset;
 
-			ImVec2 p1{ x + laneToPosition(note.lane) - 3, y - (notesHeight * 0.5f) };
-			ImVec2 p2{ x + laneToPosition(note.lane + note.width) + 3, y + (notesHeight * 0.5f) };
+				ImVec2 p1{ x + laneToPosition(note.lane) - 3, y - (notesHeight * 0.5f) };
+				ImVec2 p2{ x + laneToPosition(note.lane + note.width) + 3, y + (notesHeight * 0.5f) };
 
-			drawList->AddRectFilled(p1, p2, 0x20f4f4f4, 2.0f, ImDrawFlags_RoundCornersAll);
-			drawList->AddRect(p1, p2, 0xcccccccc, 2.0f, ImDrawFlags_RoundCornersAll, 2.0f);
+				drawList->AddRectFilled(p1, p2, 0x20f4f4f4, 2.0f, ImDrawFlags_RoundCornersAll);
+				drawList->AddRect(p1, p2, 0xcccccccc, 2.0f, ImDrawFlags_RoundCornersAll, 2.0f);
+			}
 		}
 
-		if (dragging && !pasting && !context.audioLayerSelected)
+		if (dragging && !pasting && context.isNotesEditing())
 		{
 			float startX = std::min(position.x + dragStart.x, position.x + mousePos.x);
 			float endX = std::max(position.x + dragStart.x, position.x + mousePos.x);
@@ -1498,78 +1503,58 @@ namespace MikuMikuWorld
 
 		drawList->PopClipRect();
 
-		// Status bar: playback controls, division, zoom, current time and rhythm
+		// Status bar: division, snap, edit target, current time and rhythm
 		ImGui::SetCursorPos(
 		    ImVec2{ ImGui::GetStyle().WindowPadding.x,
 		            size.y + UI::toolbarBtnSize.y + 4 + ImGui::GetStyle().WindowPadding.y });
 		ImGui::PushStyleColor(ImGuiCol_Button, ImVec4{ 0.0f, 0.0f, 0.0f, 0.0f });
 
-		if (UI::transparentButton(ICON_FA_BACKWARD, UI::btnSmall, true,
-		                          context.currentTick > 0 && !playing))
-			previousTick(context);
-
-		ImGui::SameLine();
-		if (UI::transparentButton(ICON_FA_STOP, UI::btnSmall, false))
-			stop(context);
-
-		ImGui::SameLine();
-		if (UI::transparentButton(playing ? ICON_FA_PAUSE : ICON_FA_PLAY, UI::btnSmall))
-			setPlaying(context, !playing);
-
-		ImGui::SameLine();
-		if (UI::transparentButton(ICON_FA_FORWARD, UI::btnSmall, true, !playing))
-			nextTick(context);
-
-		ImGui::PopStyleColor();
-		ImGui::SameLine();
-		ImGui::SeparatorEx(ImGuiSeparatorFlags_Vertical);
+		ImGui::TextUnformatted(getString("quantize"));
 		ImGui::SameLine();
 		UI::divisionSelect(getString("division"), division, divisions,
 		                   sizeof(divisions) / sizeof(int));
 
+		ImGui::SameLine(0.0f, 18.0f);
+		ImGui::TextUnformatted(getString("snap_mode"));
 		ImGui::SameLine();
 		int snapModeInt = (uint8_t)snapMode;
 		ImGui::SetNextItemWidth(125);
 		if (UI::inlineSelect(getString("snap_mode"), snapModeInt, snapModes,
 		                     (size_t)SnapMode::SnapModeMax))
 		{
-		snapMode = (SnapMode)snapModeInt;
-	}
-
-		static int gotoMeasure = 0;
-		bool activated = false;
-
-		ImGui::SameLine();
-		ImGui::SetNextItemWidth(50);
-		ImGui::InputInt("##goto_measure", &gotoMeasure, 0, 0, ImGuiInputTextFlags_AutoSelectAll);
-		activated |= ImGui::IsItemFocused() && ImGui::IsKeyPressed(ImGuiKey_Enter, false);
-
-		ImGui::SameLine();
-		activated |= UI::transparentButton(ICON_FA_ARROW_RIGHT, UI::btnSmall);
-
-		if (activated)
-		{
-			gotoMeasure = std::max(gotoMeasure, 0);
-			scrollTimeline(
-			    context, measureToTicks(gotoMeasure, TICKS_PER_BEAT, context.score.timeSignatures));
+			snapMode = (SnapMode)snapModeInt;
 		}
 
-		ImGui::SameLine();
-		ImGui::SeparatorEx(ImGuiSeparatorFlags_Vertical);
-		ImGui::SameLine();
-		if (UI::transparentButton(ICON_FA_MINUS, UI::btnSmall, false,
-		                          playbackSpeed > minPlaybackSpeed))
-			setPlaybackSpeed(context, playbackSpeed - 0.25f);
+		auto editTargetButton = [&](TimelineEditTarget target, const char* labelKey)
+		{
+			const bool selected = context.timelineEditTarget == target;
+			if (selected)
+				ImGui::PushStyleColor(ImGuiCol_Button,
+				                      ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
 
-		ImGui::SameLine();
-		UI::transparentButton(IO::formatString("%.0f%%", playbackSpeed * 100).c_str(),
-		                      ImVec2{ ImGui::CalcTextSize("0000%").x, UI::btnSmall.y }, false,
-		                      false);
+			if (ImGui::Button(getString(labelKey), ImVec2(0.0f, UI::btnSmall.y)))
+			{
+				if (context.timelineEditTarget != target)
+				{
+					context.clearSelection();
+					context.timelineEditTarget = target;
+					audioRangeClip = static_cast<id_t>(-1);
+					audioDragMode = AudioDragMode::None;
+				}
+			}
 
+			if (selected)
+				ImGui::PopStyleColor();
+		};
+
+		ImGui::SameLine(0.0f, 18.0f);
+		ImGui::TextUnformatted(getString("edit_target"));
 		ImGui::SameLine();
-		if (UI::transparentButton(ICON_FA_PLUS, UI::btnSmall, false,
-		                          playbackSpeed < maxPlaybackSpeed))
-			setPlaybackSpeed(context, playbackSpeed + 0.25f);
+		editTargetButton(TimelineEditTarget::Notes, "edit_target_notes");
+		ImGui::SameLine(0.0f, 0.0f);
+		editTargetButton(TimelineEditTarget::Audio, "edit_target_audio");
+
+		ImGui::PopStyleColor();
 
 		// ここで改行するために SameLine と Separator を削除します
 		
@@ -1655,6 +1640,10 @@ namespace MikuMikuWorld
 		framebuffer->clear();
 		renderer->beginBatch();
 
+		const bool notesEditable = context.isNotesEditing();
+		const Color audioEditReferenceTint = noteTint * Color{ 1.0f, 1.0f, 1.0f, 0.38f };
+		const Color audioEditOtherLayerTint = otherLayerTint * Color{ 1.0f, 1.0f, 1.0f, 0.45f };
+
 		minNoteYDistance = INT_MAX;
 		for (auto& [id, note] : context.score.notes)
 		{
@@ -1664,20 +1653,30 @@ namespace MikuMikuWorld
 
 			if (note.getType() == NoteType::Tap)
 			{
-				updateNote(context, edit, note);
+				if (notesEditable)
+					updateNote(context, edit, note);
 				drawNote(note, renderer,
-				         (context.showAllLayers || note.layer == context.selectedLayer)
-				             ? noteTint
-				             : otherLayerTint,
+				         notesEditable
+				             ? ((context.showAllLayers || note.layer == context.selectedLayer)
+				                    ? noteTint
+				                    : otherLayerTint)
+				             : ((context.showAllLayers || note.layer == context.selectedLayer)
+				                    ? audioEditReferenceTint
+				                    : audioEditOtherLayerTint),
 				         0, 0, context.showAllLayers || note.layer == context.selectedLayer);
 			}
 			if (note.getType() == NoteType::Damage)
 			{
-				updateNote(context, edit, note);
+				if (notesEditable)
+					updateNote(context, edit, note);
 				drawCcNote(note, renderer,
-				           (context.showAllLayers || note.layer == context.selectedLayer)
-				               ? noteTint
-				               : otherLayerTint,
+				           notesEditable
+				               ? ((context.showAllLayers || note.layer == context.selectedLayer)
+				                      ? noteTint
+				                      : otherLayerTint)
+				               : ((context.showAllLayers || note.layer == context.selectedLayer)
+				                      ? audioEditReferenceTint
+				                      : audioEditOtherLayerTint),
 				           0, 0, context.showAllLayers || note.layer == context.selectedLayer);
 			}
 		}
@@ -1692,21 +1691,22 @@ namespace MikuMikuWorld
 			if ((startLayerHidden || endLayerHidden) && !context.showAllLayers)
 				continue;
 
-			if (isNoteVisible(start))
+			if (notesEditable && isNoteVisible(start))
 				updateNote(context, edit, start);
-			if (isNoteVisible(end))
+			if (notesEditable && isNoteVisible(end))
 				updateNote(context, edit, end);
 
 			for (const auto& step : hold.steps)
 			{
 				Note& mid = context.score.notes.at(step.ID);
-				if (isNoteVisible(mid))
+				if (notesEditable && isNoteVisible(mid))
 					updateNote(context, edit, mid);
 				if (skipUpdateAfterSortingSteps)
 					break;
 			}
 
-			drawHoldNote(context.score.notes, hold, renderer, noteTint,
+			drawHoldNote(context.score.notes, hold, renderer,
+			             notesEditable ? noteTint : audioEditReferenceTint,
 			             context.showAllLayers ? -1 : context.selectedLayer);
 		}
 		skipUpdateAfterSortingSteps = false;
@@ -1715,7 +1715,7 @@ namespace MikuMikuWorld
 		renderer->beginBatch();
 
 		const bool pasting = context.pasteData.pasting;
-		if (pasting && mouseInTimeline && !playing)
+		if (notesEditable && pasting && mouseInTimeline && !playing)
 		{
 			context.pasteData.offsetTicks = hoverTick;
 			context.pasteData.offsetLane = hoverLane;
@@ -1728,7 +1728,14 @@ namespace MikuMikuWorld
 
 		const bool handlingFeverInput =
 		    currentMode == TimelineMode::InsertFever && (mouseInTimeline || insertingFever);
-		if ((mouseInTimeline || handlingFeverInput) && !isHoldingNote &&
+		const bool metaInputAllowedInAudioEdit =
+		    context.isAudioEditing() &&
+		    (currentMode == TimelineMode::InsertBPM ||
+		     currentMode == TimelineMode::InsertTimeSign ||
+		     currentMode == TimelineMode::InsertSkill ||
+		     currentMode == TimelineMode::InsertFever);
+		const bool timelineInputAllowed = notesEditable || metaInputAllowedInAudioEdit;
+		if (timelineInputAllowed && (mouseInTimeline || handlingFeverInput) && !isHoldingNote &&
 		    currentMode != TimelineMode::Select && !pasting && !playing && !UI::isAnyPopupOpen())
 		{
 			if (currentMode == TimelineMode::InsertFever)
@@ -4465,7 +4472,8 @@ namespace MikuMikuWorld
 
 	void ScoreEditorTimeline::drawAudioTrack(ScoreContext& context)
 	{
-		if (!context.score.audioTrack.visible)
+		const bool audioEditing = context.isAudioEditing();
+		if (!audioEditing && !config.drawWaveform)
 			return;
 
 		ImDrawList* drawList = ImGui::GetWindowDrawList();
@@ -4481,21 +4489,21 @@ namespace MikuMikuWorld
 			if (rect.Max.y < position.y || rect.Min.y > position.y + size.y)
 				continue;
 
-			const bool selected = context.selectedAudioClip == clip.ID;
+			const bool selected = audioEditing && context.selectedAudioClip == clip.ID;
 			const ImU32 fillColor =
-			    context.audioLayerSelected ? (selected ? IM_COL32(48, 78, 96, 92)
-			                                           : IM_COL32(48, 78, 96, 48))
-			                               : IM_COL32(48, 78, 96, 26);
+			    audioEditing ? (selected ? IM_COL32(48, 78, 96, 92)
+			                             : IM_COL32(48, 78, 96, 48))
+			                 : IM_COL32(48, 78, 96, 18);
 			const ImU32 borderColor =
 			    selected ? IM_COL32(165, 220, 255, 230) : IM_COL32(135, 180, 210, 130);
 			drawList->AddRectFilled(rect.Min, rect.Max, fillColor, 4.0f);
 			drawAudioClipWaveform(context, clip, rect,
-			                      context.audioLayerSelected ? IM_COL32(185, 218, 238, 150)
-			                                                 : IM_COL32(185, 218, 238, 80),
-			                      context.audioLayerSelected ? IM_COL32(155, 195, 220, 130)
-			                                                 : IM_COL32(155, 195, 220, 65));
+			                      audioEditing ? IM_COL32(185, 218, 238, 150)
+			                                   : IM_COL32(185, 218, 238, 58),
+			                      audioEditing ? IM_COL32(155, 195, 220, 130)
+			                                   : IM_COL32(155, 195, 220, 45));
 
-			if (hasAudioRangeSelection(clip.ID))
+			if (audioEditing && hasAudioRangeSelection(clip.ID))
 			{
 				const float rangeStartMs = std::min(audioRangeStartMs, audioRangeEndMs);
 				const float rangeEndMs = std::max(audioRangeStartMs, audioRangeEndMs);
@@ -4515,9 +4523,9 @@ namespace MikuMikuWorld
 			}
 
 			drawList->AddRect(rect.Min, rect.Max, borderColor, 4.0f, 0,
-			                  context.audioLayerSelected ? 2.0f : 1.0f);
+			                  audioEditing ? 2.0f : 1.0f);
 
-			if (context.audioLayerSelected)
+			if (audioEditing)
 			{
 				const float dpiScale = ImGui::GetMainViewport()->DpiScale;
 				const float grabWidth = 14.0f * dpiScale;
@@ -4569,8 +4577,7 @@ namespace MikuMikuWorld
 	void ScoreEditorTimeline::updateAudioTrackEditing(ScoreContext& context)
 	{
 		suppressTimelineContextMenu = false;
-		if (!context.audioLayerSelected || context.score.audioTrack.locked ||
-		    !context.score.audioTrack.visible)
+		if (!context.isAudioEditing() || context.score.audioTrack.locked)
 			return;
 
 		const ImGuiIO& io = ImGui::GetIO();
@@ -4729,7 +4736,7 @@ namespace MikuMikuWorld
 				if (ImGui::IsMouseClicked(ImGuiMouseButton_Right))
 				{
 					context.clearSelection();
-					context.audioLayerSelected = true;
+					context.timelineEditTarget = TimelineEditTarget::Audio;
 					context.selectedAudioClip = clip.ID;
 					audioContextMenuClip = clip.ID;
 					audioContextMenuHasRange = hasAudioRangeSelection(clip.ID);
@@ -4743,7 +4750,7 @@ namespace MikuMikuWorld
 				if (ImGui::IsMouseClicked(ImGuiMouseButton_Left))
 				{
 					context.clearSelection();
-					context.audioLayerSelected = true;
+					context.timelineEditTarget = TimelineEditTarget::Audio;
 					context.selectedAudioClip = clip.ID;
 					draggingAudioClip = clip.ID;
 					audioDragStartClip = clip;
@@ -4947,7 +4954,7 @@ namespace MikuMikuWorld
 		{
 			const bool rightChannel = index == 1;
 			const Audio::WaveformMipChain& waveform =
-			    context.audioLayerSelected
+			    context.isAudioEditing()
 			        ? (rightChannel ? context.sourceWaveformR : context.sourceWaveformL)
 			        : (rightChannel ? context.waveformR : context.waveformL);
 			if (waveform.isEmpty())
@@ -5129,6 +5136,13 @@ namespace MikuMikuWorld
 	static Score prevScoreForDrag;
 	static float dragAccumulatedSpeed = 0.0f;
 
+	const bool hiSpeedEditable = context.isNotesEditing();
+	if (!hiSpeedEditable)
+	{
+		draggingNodeID = -1;
+		nodeWasDragged = false;
+	}
+
 	std::vector<HiSpeedChange> hoveredTooltips;
 
 	if (layerChanges.find(context.selectedLayer) != layerChanges.end()) {
@@ -5174,7 +5188,7 @@ namespace MikuMikuWorld
 				isAnyNodeHovered = true;
 			}
 
-			if (isHovered || isDraggingThis) {
+			if (hiSpeedEditable && (isHovered || isDraggingThis)) {
 				isHoveringNote = true; 
 			}
 
@@ -5195,7 +5209,7 @@ namespace MikuMikuWorld
 			}
 			drawList->AddCircleFilled(ImVec2(x1, y1), radius, circleColor);
 
-			if (isHovered && draggingNodeID == -1) {
+			if (hiSpeedEditable && isHovered && draggingNodeID == -1) {
 				hoveredTooltips.push_back(current);
 
 				if (ImGui::IsMouseClicked(0)) {
@@ -5241,7 +5255,7 @@ namespace MikuMikuWorld
 				}
 			}
 
-			if (isDraggingThis) {
+			if (hiSpeedEditable && isDraggingThis) {
 				if (ImGui::IsMouseDragging(0, 2.0f)) {
 					nodeWasDragged = true;
 				}
@@ -5340,7 +5354,7 @@ namespace MikuMikuWorld
 		}
 	}
 
-	if (!hoveredTooltips.empty() && draggingNodeID == -1) {
+	if (hiSpeedEditable && !hoveredTooltips.empty() && draggingNodeID == -1) {
 		ImGui::BeginTooltip();
 		for (const auto& node : hoveredTooltips) {
 			ImGui::Text("%.2fx", node.speed);
@@ -5354,7 +5368,7 @@ namespace MikuMikuWorld
 		ImGui::EndTooltip();
 	}
 
-	if (!isAnyNodeHovered && mouseInTimeline && mousePos.x >= laneStartX && mousePos.x <= laneEndX) {
+	if (hiSpeedEditable && !isAnyNodeHovered && mouseInTimeline && mousePos.x >= laneStartX && mousePos.x <= laneEndX) {
 		if (ImGui::IsMouseDoubleClicked(0)) {
 			float normalizedX = std::clamp((mousePos.x - drawableStartX) / drawableWidth, 0.0f, 1.0f);
 			float newSpeed = activeMin + (normalizedX * (activeMax - activeMin));

@@ -33,7 +33,8 @@ namespace MikuMikuWorld
 	class ScoreOptionsWindow
 	{
 	  public:
-		void update(ScoreContext& context, EditArgs& edit, TimelineMode currentMode);
+		void update(ScoreContext& context, EditArgs& edit, TimelineMode currentMode,
+		            bool& backgroundChangePending);
 	};
 
 	class PresetsWindow
@@ -70,7 +71,7 @@ namespace MikuMikuWorld
 	  public:
 		bool open = false;
 		bool isBackgroundChangePending = false;
-		DialogResult update();
+		DialogResult update(ScoreContext& context);
 	};
 
 	class RecentFileNotFoundDialog

@@ -417,3 +417,16 @@ layer_force_note_speed,ノーツ速度固定
 insert_skill,スキルを追加
 set_fever_start,FEVER開始
 set_fever_end,FEVER終了
+quantize, クオンタイズ
+edit_target, 編集対象
+edit_target_notes, ノーツ編集
+edit_target_audio, 音源編集
+playback_speed, 再生速度
+audio_lock, 音源ロック
+level_data, レベルデータ
+quick_settings, クイック設定
+edit_assist_settings, 編集補助設定
+pinned_settings, ピン留め設定
+pin_quick_setting, クイック設定に表示
+unpin_quick_setting, クイック設定から非表示
+no_pinned_settings, ピン留めされた設定はありません

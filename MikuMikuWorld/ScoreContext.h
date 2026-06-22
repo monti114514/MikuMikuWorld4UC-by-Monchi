@@ -9,11 +9,18 @@
 #include "ScoreStats.h"
 #include "TimelineMode.h"
 #include "PreviewData.h" // <--- これを追加
+#include <cstdint>
 #include <set>
 #include <unordered_set>
 
 namespace MikuMikuWorld
 {
+	enum class TimelineEditTarget : uint8_t
+	{
+		Notes,
+		Audio,
+	};
+
 	struct EditArgs
 	{
 		int noteWidth{ 3 };
@@ -135,8 +142,11 @@ namespace MikuMikuWorld
 
 		int selectedLayer = 0;
 		bool showAllLayers = false;
-		bool audioLayerSelected = false;
+		TimelineEditTarget timelineEditTarget = TimelineEditTarget::Notes;
 		id_t selectedAudioClip = static_cast<id_t>(-1);
+
+		bool isAudioEditing() const { return timelineEditTarget == TimelineEditTarget::Audio; }
+		bool isNotesEditing() const { return timelineEditTarget == TimelineEditTarget::Notes; }
 
 		bool hasSelection() const
 		{

@@ -315,19 +315,44 @@ namespace MikuMikuWorld
 			value = std::clamp(value, 4, 1920);
 			act = true;
 		}
-
 		// enable right-click
 		ImGui::OpenPopupOnItemClick("combobox");
 		ImVec2 pos = ImGui::GetItemRectMin();
 		ImVec2 size = ImGui::GetItemRectSize();
 
+		bool hovered = ImGui::IsItemHovered();
 		ImGui::SameLine(0, 0);
 		if (ImGui::ArrowButton("##open_combo", ImGuiDir_Down))
 			ImGui::OpenPopup("combobox");
+		hovered = hovered || ImGui::IsItemHovered();
+
+		if (hovered)
+		{
+			const float wheel = ImGui::GetIO().MouseWheel;
+			if (wheel != 0.0f && count > 0)
+			{
+				int index = 0;
+				for (int i = 0; i < count; ++i)
+				{
+					if (items[i] == value)
+					{
+						index = i;
+						break;
+					}
+				}
+
+				index += wheel < 0.0f ? 1 : -1;
+				index = std::clamp(index, 0, static_cast<int>(count) - 1);
+				if (value != items[index])
+				{
+					value = items[index];
+					act = true;
+				}
+			}
+		}
 
 		// enable right-click
 		ImGui::OpenPopupOnItemClick("combobox");
-
 		size.x += ImGui::GetItemRectSize().x;
 		size.y += size.y * 6;
 		pos.y -= size.y;
@@ -360,9 +385,14 @@ namespace MikuMikuWorld
 		std::string curr = getString(items[value]);
 		if (!curr.size())
 			curr = items[value];
-		if (ImGui::BeginCombo(id, curr.c_str()))
+		bool act = false;
+		ImDrawList* drawList = ImGui::GetWindowDrawList();
+		const bool comboOpen = ImGui::BeginCombo(id, "");
+		const ImVec2 comboMin = ImGui::GetItemRectMin();
+		const ImVec2 comboMax = ImGui::GetItemRectMax();
+		const bool comboHovered = ImGui::IsItemHovered();
+		if (comboOpen)
 		{
-			bool act = false;
 			for (int i = 0; i < count; ++i)
 			{
 				const bool selected = value == i;
@@ -378,14 +408,32 @@ namespace MikuMikuWorld
 			}
 
 			ImGui::EndCombo();
-			ImGui::NextColumn();
-			ImGui::PopID();
-			return act;
+		}
+		const float arrowWidth = ImGui::GetFrameHeight();
+		const ImVec2 textSize = ImGui::CalcTextSize(curr.c_str());
+		const float textStartX =
+		    comboMin.x + std::max(0.0f, ((comboMax.x - comboMin.x - arrowWidth) - textSize.x) * 0.5f);
+		const float textStartY = comboMin.y + ((comboMax.y - comboMin.y) - textSize.y) * 0.5f;
+		drawList->AddText(ImVec2(textStartX, textStartY), ImGui::GetColorU32(ImGuiCol_Text),
+		                  curr.c_str());
+
+		if (comboHovered)
+		{
+			const float wheel = ImGui::GetIO().MouseWheel;
+			if (wheel != 0.0f && count > 0)
+			{
+				int next = value + (wheel < 0.0f ? 1 : -1);
+				next = std::clamp(next, 0, static_cast<int>(count) - 1);
+				if (next != value)
+				{
+					value = next;
+					act = true;
+				}
+			}
 		}
 
-		ImGui::NextColumn();
 		ImGui::PopID();
-		return false;
+		return act;
 	}
 
 	bool UI::zoomControl(const char* label, float& value, float min, float max, float width)

@@ -188,6 +188,13 @@ snap_mode,Snapping
 snap_mode_relative,Relative Snap
 snap_mode_absolute,Absolute Snap
 snap_mode_individual_absolute,Individual Absolute Snap
+quantize,Quantize
+edit_target,Edit Target
+edit_target_notes,Notes Edit
+edit_target_audio,Audio Edit
+playback_speed,Playback Speed
+audio_lock,Audio Lock
+level_data,Level Data
 zoom,Zoom
 show_step_outlines,Show Hold Mid Outlines
 draw_waveform,Show Waveform
@@ -413,3 +420,9 @@ layer_force_note_speed,Force Note Speed
 insert_skill,Insert Skill
 set_fever_start,Set FEVER Start
 set_fever_end,Set FEVER End
+quick_settings,Quick Settings
+edit_assist_settings,Edit Assist Settings
+pinned_settings,Pinned Settings
+pin_quick_setting,Show in Quick Settings
+unpin_quick_setting,Hide from Quick Settings
+no_pinned_settings,No pinned settings

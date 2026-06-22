@@ -137,8 +137,6 @@ namespace MikuMikuWorld::AudioTrackUtils
 			return false;
 
 		const AudioClip& clip = score.audioTrack.clips.front();
-		if (clip.muted)
-			return true;
 		if (std::abs(clip.timelineStartMs - score.metadata.musicOffset) > 0.01f)
 			return true;
 		if (clip.sourceStartMs > 0.01f || clip.fadeInMs > 0.01f || clip.fadeOutMs > 0.01f)
@@ -156,8 +154,6 @@ namespace MikuMikuWorld::AudioTrackUtils
 		float startMs = std::numeric_limits<float>::max();
 		for (const AudioClip& clip : score.audioTrack.clips)
 		{
-			if (clip.muted || (!ignoreEditorMute && score.audioTrack.muted))
-				continue;
 			startMs = std::min(startMs, clip.timelineStartMs);
 		}
 		return startMs == std::numeric_limits<float>::max() ? fallbackMusicOffsetMs : startMs;
@@ -195,9 +191,6 @@ namespace MikuMikuWorld::AudioTrackUtils
 
 		for (const AudioClip& clip : score.audioTrack.clips)
 		{
-			if ((!ignoreEditorMute && score.audioTrack.muted) || clip.muted)
-				continue;
-
 			const std::string sourceFile = resolveSourceFile(clip, fallbackSourceFile);
 			if (sourceFile.empty())
 				continue;
@@ -308,7 +301,7 @@ namespace MikuMikuWorld::AudioTrackUtils
 	{
 		if (hasAudioTrackData(context.score))
 		{
-			if (context.score.audioTrack.muted || context.score.audioTrack.clips.empty())
+			if (context.score.audioTrack.clips.empty())
 				return loadSilence(context, context.workingData.musicOffset);
 
 			if (hasAudioTrackEdits(context.score))

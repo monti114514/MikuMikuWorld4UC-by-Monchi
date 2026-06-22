@@ -1,6 +1,7 @@
 #include "ApplicationConfiguration.h"
 #include "IO.h"
 #include "JsonIO.h"
+#include <algorithm>
 #include <filesystem>
 #include <fstream>
 
@@ -179,6 +180,22 @@ namespace MikuMikuWorld
 			    0.0f, 1.0f);
 		}
 
+		if (jsonIO::keyExists(configJson, "pinnedQuickSettings") &&
+		    configJson["pinnedQuickSettings"].is_array())
+		{
+			pinnedQuickSettings.clear();
+			for (const auto& setting : configJson["pinnedQuickSettings"])
+			{
+				if (!setting.is_string())
+					continue;
+
+				std::string settingId = setting.get<std::string>();
+				if (std::find(pinnedQuickSettings.begin(), pinnedQuickSettings.end(),
+				              settingId) == pinnedQuickSettings.end())
+					pinnedQuickSettings.push_back(settingId);
+			}
+		}
+
 		if (jsonIO::keyExists(configJson, "input") &&
 		    jsonIO::keyExists(configJson["input"], "bindings"))
 		{
@@ -278,6 +295,8 @@ namespace MikuMikuWorld
 			                { "bgm_volume", bgmVolume },
 			                { "se_volume", seVolume } };
 
+		config["pinnedQuickSettings"] = pinnedQuickSettings;
+
 		json keyBindings;
 		for (const auto& binding : bindings)
 		{
@@ -363,6 +382,7 @@ namespace MikuMikuWorld
 		masterVolume = 0.5f;
 		bgmVolume = 1.0f;
 		seVolume = 1.0f;
+		pinnedQuickSettings = { "masterVolume", "bgmVolume", "seVolume" };
 
 		debugEnabled = false;
 	}

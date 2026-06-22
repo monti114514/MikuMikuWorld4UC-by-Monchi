@@ -95,7 +95,6 @@ namespace MikuMikuWorld
 		float fadeInMs = 0.0f;
 		float fadeOutMs = 0.0f;
 		float gain = 1.0f;
-		bool muted = false;
 		bool locked = false;
 		bool visible = true;
 	};
@@ -104,7 +103,6 @@ namespace MikuMikuWorld
 	{
 		std::string name = "BGM";
 		bool explicitEditorTrack = false;
-		bool muted = false;
 		bool locked = false;
 		bool visible = true;
 		std::vector<AudioClip> clips;

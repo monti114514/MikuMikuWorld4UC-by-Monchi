@@ -19,6 +19,7 @@
 #include <algorithm>
 #include <array>
 #include <cctype>
+#include <cmath>
 #include <iomanip>
 #include <Windows.h>
 #include <shobjidl.h>
@@ -48,6 +49,47 @@ namespace MikuMikuWorld
 	constexpr const char* UPDATE_API_HOST = "https://api.github.com";
 	constexpr const char* UPDATE_API_PATH = "/repos/monti114514/MikuMikuWorld4UC-by-Monchi/releases/latest";
 	constexpr bool INCLUDE_PRERELEASE_UPDATES = false;
+
+	void restoreScoreHistory(ScoreContext& context, bool undo)
+	{
+		if (undo ? !context.history.hasUndo() : !context.history.hasRedo())
+			return;
+
+		const Score previousScore = context.score;
+		if (undo)
+			context.undo();
+		else
+			context.redo();
+
+		if (AudioTrackUtils::hasAudioTrackData(previousScore) ||
+		    AudioTrackUtils::hasAudioTrackData(context.score))
+		{
+			Result result = AudioTrackUtils::refreshPlaybackAudio(context);
+			if (!result.isOk())
+				IO::messageBox(APP_NAME, result.getMessage(), IO::MessageBoxButtons::Ok,
+				               IO::MessageBoxIcon::Warning);
+		}
+	}
+
+	bool modeRequiresNotesTarget(TimelineMode mode)
+	{
+		switch (mode)
+		{
+		case TimelineMode::InsertTap:
+		case TimelineMode::InsertLong:
+		case TimelineMode::InsertLongMid:
+		case TimelineMode::InsertFlick:
+		case TimelineMode::MakeCritical:
+		case TimelineMode::MakeFriction:
+		case TimelineMode::InsertGuide:
+		case TimelineMode::InsertDamage:
+		case TimelineMode::MakeDummy:
+		case TimelineMode::InsertHiSpeed:
+			return true;
+		default:
+			return false;
+		}
+	}
 
 	struct ParsedVersion
 	{
@@ -419,9 +461,9 @@ namespace MikuMikuWorld
 			if (ImGui::IsAnyPressed(config.input.flip))
 				context.flipSelection();
 			if (ImGui::IsAnyPressed(config.input.undo))
-				context.undo();
+				restoreScoreHistory(context, true);
 			if (ImGui::IsAnyPressed(config.input.redo))
-				context.redo();
+				restoreScoreHistory(context, false);
 			if (ImGui::IsAnyPressed(config.input.zoomOut, true))
 				timeline.setZoom(timeline.getZoom() - 0.25f);
 			if (ImGui::IsAnyPressed(config.input.zoomIn, true))
@@ -445,7 +487,14 @@ namespace MikuMikuWorld
 
 			for (int i = 0; i < (int)TimelineMode::TimelineModeMax; ++i)
 				if (timelineModeBindings[i] && ImGui::IsAnyPressed(*timelineModeBindings[i]))
+				{
+					if (modeRequiresNotesTarget((TimelineMode)i))
+					{
+						context.timelineEditTarget = TimelineEditTarget::Notes;
+						context.selectedAudioClip = static_cast<id_t>(-1);
+					}
 					timeline.changeMode((TimelineMode)i, edit);
+				}
 		}
 
 		timeline.laneWidth = config.timelineWidth;
@@ -490,7 +539,7 @@ namespace MikuMikuWorld
 				                         recentFileNotFoundDialog.removeIndex);
 		}
 
-		settingsWindow.update();
+		settingsWindow.update(context);
 		aboutDialog.update();
 		updateAvailableDialog.update();
 		serializeWindow.update(*this, context, timeline);
@@ -529,9 +578,10 @@ namespace MikuMikuWorld
 		}
 		ImGui::End();
 
-		if (ImGui::Begin(IMGUI_TITLE(ICON_FA_WRENCH, "options"), NULL, ImGuiWindowFlags_Static))
+		if (ImGui::Begin(IMGUI_TITLE(ICON_FA_WRENCH, "quick_settings"), NULL, ImGuiWindowFlags_Static))
 		{
-			optionsWindow.update(context, edit, timeline.getMode());
+			optionsWindow.update(context, edit, timeline.getMode(),
+			                     settingsWindow.isBackgroundChangePending);
 		}
 		ImGui::End();
 
@@ -854,11 +904,11 @@ namespace MikuMikuWorld
 		{
 			if (ImGui::MenuItem(getString("undo"), ToShortcutString(config.input.undo), false,
 			                    context.history.hasUndo()))
-				context.undo();
+				restoreScoreHistory(context, true);
 
 			if (ImGui::MenuItem(getString("redo"), ToShortcutString(config.input.redo), false,
 			                    context.history.hasRedo()))
-				context.redo();
+				restoreScoreHistory(context, false);
 
 			ImGui::Separator();
 			if (ImGui::MenuItem(getString("delete"), ToShortcutString(config.input.deleteSelection),
@@ -1042,11 +1092,52 @@ namespace MikuMikuWorld
 
 		if (UI::toolbarButton(ICON_FA_UNDO, getString("undo"), ToShortcutString(config.input.undo),
 		                      context.history.hasUndo()))
-			context.undo();
+			restoreScoreHistory(context, true);
 
 		if (UI::toolbarButton(ICON_FA_REDO, getString("redo"), ToShortcutString(config.input.redo),
 		                      context.history.hasRedo()))
-			context.redo();
+			restoreScoreHistory(context, false);
+
+		UI::toolbarSeparator();
+
+		if (UI::toolbarButton(timeline.isPlaying() ? ICON_FA_PAUSE : ICON_FA_PLAY,
+		                      getString("toggle_playback"),
+		                      ToShortcutString(config.input.togglePlayback)))
+			timeline.setPlaying(context, !timeline.isPlaying());
+
+		if (UI::toolbarButton(ICON_FA_STOP, getString("stop"), ToShortcutString(config.input.stop)))
+			timeline.stop(context);
+
+		if (UI::toolbarButton(ICON_FA_BACKWARD, getString("previous_tick"), "",
+		                      context.currentTick > 0 && !timeline.isPlaying()))
+			timeline.previousTick(context);
+
+		if (UI::toolbarButton(ICON_FA_FORWARD, getString("next_tick"), "",
+		                      !timeline.isPlaying()))
+			timeline.nextTick(context);
+
+		ImGui::SameLine();
+		if (UI::transparentButton(ICON_FA_MINUS, UI::toolbarBtnSize, false,
+		                          timeline.getPlaybackSpeed() > 0.25f))
+			timeline.setPlaybackSpeed(context, timeline.getPlaybackSpeed() - 0.25f);
+
+		ImGui::SameLine();
+		const float toolbarPlaybackSpeed = timeline.getPlaybackSpeed();
+		const std::string playbackSpeedText =
+		    std::abs(toolbarPlaybackSpeed - std::round(toolbarPlaybackSpeed)) < 0.001f
+		        ? IO::formatString("%.1f", toolbarPlaybackSpeed)
+		        : IO::formatString("%.2f", toolbarPlaybackSpeed);
+		UI::transparentButton(IO::formatString("%sx%s", ICON_FA_PLAY,
+		                                       playbackSpeedText.c_str())
+		                          .c_str(),
+		                      ImVec2(ImGui::CalcTextSize(ICON_FA_PLAY "x0.25").x + 8.0f,
+		                             UI::toolbarBtnSize.y),
+		                      false, false);
+
+		ImGui::SameLine();
+		if (UI::transparentButton(ICON_FA_PLUS, UI::toolbarBtnSize, false,
+		                          timeline.getPlaybackSpeed() < 1.0f))
+			timeline.setPlaybackSpeed(context, timeline.getPlaybackSpeed() + 0.25f);
 
 		UI::toolbarSeparator();
 
@@ -1069,7 +1160,14 @@ namespace MikuMikuWorld
 			if (UI::toolbarImageButton(img.c_str(), getString(timelineModes[i]),
 			                           shortcut, true,
 			                           (int)timeline.getMode() == i))
+			{
+				if (modeRequiresNotesTarget((TimelineMode)i))
+				{
+					context.timelineEditTarget = TimelineEditTarget::Notes;
+					context.selectedAudioClip = static_cast<id_t>(-1);
+				}
 				timeline.changeMode((TimelineMode)i, edit);
+			}
 		}
 
 		ImGui::PopStyleColor(3);

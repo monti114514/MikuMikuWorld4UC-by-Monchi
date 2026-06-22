@@ -191,8 +191,6 @@ namespace MikuMikuWorld
 		unsigned int toAudioTrackFlags(const AudioTrack& track)
 		{
 			unsigned int flags = 0;
-			if (track.muted)
-				flags |= AUDIO_TRACK_MUTED;
 			if (track.locked)
 				flags |= AUDIO_TRACK_LOCKED;
 			if (track.visible)
@@ -204,7 +202,6 @@ namespace MikuMikuWorld
 
 		void applyAudioTrackFlags(AudioTrack& track, unsigned int flags)
 		{
-			track.muted = (flags & AUDIO_TRACK_MUTED) != 0;
 			track.locked = (flags & AUDIO_TRACK_LOCKED) != 0;
 			track.visible = (flags & AUDIO_TRACK_VISIBLE) != 0;
 			track.explicitEditorTrack = (flags & AUDIO_TRACK_EXPLICIT) != 0;
@@ -213,8 +210,6 @@ namespace MikuMikuWorld
 		unsigned int toAudioClipFlags(const AudioClip& clip)
 		{
 			unsigned int flags = 0;
-			if (clip.muted)
-				flags |= AUDIO_CLIP_MUTED;
 			if (clip.locked)
 				flags |= AUDIO_CLIP_LOCKED;
 			if (clip.visible)
@@ -224,7 +219,6 @@ namespace MikuMikuWorld
 
 		void applyAudioClipFlags(AudioClip& clip, unsigned int flags)
 		{
-			clip.muted = (flags & AUDIO_CLIP_MUTED) != 0;
 			clip.locked = (flags & AUDIO_CLIP_LOCKED) != 0;
 			clip.visible = (flags & AUDIO_CLIP_VISIBLE) != 0;
 		}
@@ -1158,7 +1152,7 @@ namespace MikuMikuWorld
 		}))
 			return true;
 
-		if (score.audioTrack.muted || score.audioTrack.locked || !score.audioTrack.visible)
+		if (score.audioTrack.locked || !score.audioTrack.visible)
 			return true;
 		if (score.audioTrack.explicitEditorTrack && score.audioTrack.clips.empty())
 			return true;
@@ -1166,7 +1160,7 @@ namespace MikuMikuWorld
 			return true;
 		for (const AudioClip& clip : score.audioTrack.clips)
 		{
-			if (clip.muted || clip.locked || !clip.visible)
+			if (clip.locked || !clip.visible)
 				return true;
 			if (clip.sourceStartMs > 0.01f || clip.fadeInMs > 0.01f ||
 			    clip.fadeOutMs > 0.01f || std::abs(clip.gain - 1.0f) > 0.001f)

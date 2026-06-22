@@ -8,11 +8,516 @@
 #include "AudioTrackUtils.h"
 #include "UI.h"
 #include "Utilities.h"
+#include <algorithm>
 #include <climits>
 #include <cmath>
 
 namespace MikuMikuWorld
 {
+	namespace
+	{
+		constexpr const char* quickSettingLanguage = "language";
+		constexpr const char* quickSettingAutoSaveEnabled = "autoSaveEnabled";
+		constexpr const char* quickSettingAutoSaveInterval = "autoSaveInterval";
+		constexpr const char* quickSettingAutoSaveMaxCount = "autoSaveMaxCount";
+		constexpr const char* quickSettingMasterVolume = "masterVolume";
+		constexpr const char* quickSettingBgmVolume = "bgmVolume";
+		constexpr const char* quickSettingSeVolume = "seVolume";
+		constexpr const char* quickSettingBaseTheme = "baseTheme";
+		constexpr const char* quickSettingVsync = "vsync";
+		constexpr const char* quickSettingMatchNotesSizeToTimeline = "matchNotesSizeToTimeline";
+		constexpr const char* quickSettingTimelineWidth = "timelineWidth";
+		constexpr const char* quickSettingNotesHeight = "notesHeight";
+		constexpr const char* quickSettingDrawWaveform = "drawWaveform";
+		constexpr const char* quickSettingReturnToLastTick = "returnToLastTick";
+		constexpr const char* quickSettingDrawHiSpeedAutomation = "drawHiSpeedAutomation";
+		constexpr const char* quickSettingHiSpeedGraphLimit = "hiSpeedGraphLimit";
+		constexpr const char* quickSettingHiSpeedGraphBgOpacity = "hiSpeedGraphBgOpacity";
+		constexpr const char* quickSettingFollowCursorInPlayback = "followCursorInPlayback";
+		constexpr const char* quickSettingCursorPositionThreshold = "cursorPositionThreshold";
+		constexpr const char* quickSettingScrollSpeedNormal = "scrollSpeedNormal";
+		constexpr const char* quickSettingScrollSpeedShift = "scrollSpeedShift";
+		constexpr const char* quickSettingUseSmoothScrolling = "useSmoothScrolling";
+		constexpr const char* quickSettingSmoothScrollingTime = "smoothScrollingTime";
+		constexpr const char* quickSettingNotesSe = "notesSe";
+		constexpr const char* quickSettingDrawBackground = "drawBackground";
+		constexpr const char* quickSettingBackgroundImage = "backgroundImage";
+		constexpr const char* quickSettingBackgroundBrightness = "backgroundBrightness";
+		constexpr const char* quickSettingLaneOpacity = "laneOpacity";
+		constexpr const char* quickSettingShowTickInProperties = "showTickInProperties";
+		constexpr const char* quickSettingPreviewDrawToolbar = "previewDrawToolbar";
+		constexpr const char* quickSettingPreviewNoteSpeed = "previewNoteSpeed";
+		constexpr const char* quickSettingPreviewStageCover = "previewStageCover";
+		constexpr const char* quickSettingPreviewHoldAlpha = "previewHoldAlpha";
+		constexpr const char* quickSettingPreviewGuideAlpha = "previewGuideAlpha";
+		constexpr const char* quickSettingPreviewMirrorScore = "previewMirrorScore";
+		constexpr const char* quickSettingPreviewSimultaneousLine = "previewSimultaneousLine";
+		constexpr const char* quickSettingPreviewBackgroundBrightness =
+		    "previewBackgroundBrightness";
+		constexpr const char* quickSettingPreviewStageOpacity = "previewStageOpacity";
+
+		bool settingIs(const char* lhs, const char* rhs) { return std::string(lhs) == rhs; }
+
+		bool isQuickSettingPinned(const char* settingId)
+		{
+			return std::find(config.pinnedQuickSettings.begin(), config.pinnedQuickSettings.end(),
+			                 settingId) != config.pinnedQuickSettings.end();
+		}
+
+		void setQuickSettingPinned(const char* settingId, bool pinned)
+		{
+			auto it = std::find(config.pinnedQuickSettings.begin(),
+			                    config.pinnedQuickSettings.end(), settingId);
+			if (pinned && it == config.pinnedQuickSettings.end())
+				config.pinnedQuickSettings.push_back(settingId);
+			else if (!pinned && it != config.pinnedQuickSettings.end())
+				config.pinnedQuickSettings.erase(it);
+		}
+
+		void applyVolumeSetting(ScoreContext& context, const char* settingId, float value)
+		{
+			value = std::clamp(value, 0.0f, 1.0f);
+			if (settingIs(settingId, quickSettingMasterVolume))
+			{
+				config.masterVolume = value;
+				context.audio.setMasterVolume(value);
+			}
+			else if (settingIs(settingId, quickSettingBgmVolume))
+			{
+				config.bgmVolume = value;
+				context.audio.setMusicVolume(value);
+			}
+			else if (settingIs(settingId, quickSettingSeVolume))
+			{
+				config.seVolume = value;
+				context.audio.setSoundEffectsVolume(value);
+			}
+		}
+
+		float getVolumeSettingValue(const char* settingId)
+		{
+			if (settingIs(settingId, quickSettingMasterVolume))
+				return config.masterVolume;
+			if (settingIs(settingId, quickSettingBgmVolume))
+				return config.bgmVolume;
+			if (settingIs(settingId, quickSettingSeVolume))
+				return config.seVolume;
+			return 0.0f;
+		}
+
+		const char* getQuickSettingLabel(const char* settingId)
+		{
+			if (settingIs(settingId, quickSettingLanguage))
+				return getString("language");
+			if (settingIs(settingId, quickSettingAutoSaveEnabled))
+				return getString("auto_save_enable");
+			if (settingIs(settingId, quickSettingAutoSaveInterval))
+				return getString("auto_save_interval");
+			if (settingIs(settingId, quickSettingAutoSaveMaxCount))
+				return getString("auto_save_count");
+			if (settingIs(settingId, quickSettingMasterVolume))
+				return getString("volume_master");
+			if (settingIs(settingId, quickSettingBgmVolume))
+				return getString("volume_bgm");
+			if (settingIs(settingId, quickSettingSeVolume))
+				return getString("volume_se");
+			if (settingIs(settingId, quickSettingBaseTheme))
+				return getString("base_theme");
+			if (settingIs(settingId, quickSettingVsync))
+				return getString("vsync");
+			if (settingIs(settingId, quickSettingMatchNotesSizeToTimeline))
+				return getString("match_notes_size_to_timeline");
+			if (settingIs(settingId, quickSettingTimelineWidth))
+				return getString("lane_width");
+			if (settingIs(settingId, quickSettingNotesHeight))
+				return getString("notes_height");
+			if (settingIs(settingId, quickSettingDrawWaveform))
+				return getString("draw_waveform");
+			if (settingIs(settingId, quickSettingReturnToLastTick))
+				return getString("return_to_last_tick");
+			if (settingIs(settingId, quickSettingDrawHiSpeedAutomation))
+				return getString("draw_hispeed_automation");
+			if (settingIs(settingId, quickSettingHiSpeedGraphLimit))
+				return getString("hispeed_graph_limit");
+			if (settingIs(settingId, quickSettingHiSpeedGraphBgOpacity))
+				return getString("hispeed_graph_bg_opacity");
+			if (settingIs(settingId, quickSettingFollowCursorInPlayback))
+				return getString("cursor_auto_scroll");
+			if (settingIs(settingId, quickSettingCursorPositionThreshold))
+				return getString("cursor_auto_scroll_amount");
+			if (settingIs(settingId, quickSettingScrollSpeedNormal))
+				return getString("scroll_speed_normal");
+			if (settingIs(settingId, quickSettingScrollSpeedShift))
+				return getString("scroll_speed_shift");
+			if (settingIs(settingId, quickSettingUseSmoothScrolling))
+				return getString("use_smooth_scroll");
+			if (settingIs(settingId, quickSettingSmoothScrollingTime))
+				return getString("smooth_scroll_time");
+			if (settingIs(settingId, quickSettingNotesSe))
+				return getString("notes_se");
+			if (settingIs(settingId, quickSettingDrawBackground))
+				return getString("draw_background");
+			if (settingIs(settingId, quickSettingBackgroundImage))
+				return getString("background_image");
+			if (settingIs(settingId, quickSettingBackgroundBrightness))
+				return getString("background_brightnes");
+			if (settingIs(settingId, quickSettingLaneOpacity))
+				return getString("lanes_opacity");
+			if (settingIs(settingId, quickSettingShowTickInProperties))
+				return getString("show_tick_in_properties");
+			if (settingIs(settingId, quickSettingPreviewDrawToolbar))
+				return getString("preview_draw_toolbar");
+			if (settingIs(settingId, quickSettingPreviewNoteSpeed))
+				return getString("notes_speed");
+			if (settingIs(settingId, quickSettingPreviewStageCover))
+				return getString("stage_cover");
+			if (settingIs(settingId, quickSettingPreviewHoldAlpha))
+				return getString("holds_alpha");
+			if (settingIs(settingId, quickSettingPreviewGuideAlpha))
+				return getString("guides_alpha");
+			if (settingIs(settingId, quickSettingPreviewMirrorScore))
+				return getString("mirror_score");
+			if (settingIs(settingId, quickSettingPreviewSimultaneousLine))
+				return getString("simultaneous_lines");
+			if (settingIs(settingId, quickSettingPreviewBackgroundBrightness))
+				return getString("background_brightnes");
+			if (settingIs(settingId, quickSettingPreviewStageOpacity))
+				return getString("stage_opacity");
+			return "";
+		}
+
+		void pinnedPropertyLabel(const char* settingId, const char* label)
+		{
+			const bool pinned = isQuickSettingPinned(settingId);
+			const ImVec4 iconColor = pinned
+			                             ? ImGui::GetStyleColorVec4(ImGuiCol_Text)
+			                             : ImGui::GetStyleColorVec4(ImGuiCol_TextDisabled);
+			std::string pinButton = std::string(ICON_FA_THUMBTACK) + "##pin_" + settingId;
+
+			ImGui::PushStyleColor(ImGuiCol_Text, iconColor);
+			if (UI::transparentButton(pinButton.c_str(),
+			                          ImVec2(ImGui::GetFrameHeight(), ImGui::GetFrameHeight()),
+			                          false))
+				setQuickSettingPinned(settingId, !pinned);
+			ImGui::PopStyleColor();
+			UI::tooltip(getString(pinned ? "unpin_quick_setting" : "pin_quick_setting"));
+
+			ImGui::SameLine();
+			ImGui::Text("%s", label);
+			ImGui::NextColumn();
+			ImGui::SetNextItemWidth(-1);
+		}
+
+		void addPinnedPercentSliderProperty(ScoreContext& context, const char* settingId,
+		                                    const char* label)
+		{
+			float value = getVolumeSettingValue(settingId);
+			const float previousValue = value;
+
+			pinnedPropertyLabel(settingId, label);
+			float scaled = value * 100.0f;
+			ImGui::SliderFloat(UI::labelID(label), &scaled, 0.0f, 100.0f, "%.0f%%",
+			                   ImGuiSliderFlags_AlwaysClamp);
+			ImGui::NextColumn();
+
+			value = std::clamp(scaled / 100.0f, 0.0f, 1.0f);
+			if (value != previousValue)
+				applyVolumeSetting(context, settingId, value);
+		}
+
+		bool addPinnedCheckboxProperty(const char* settingId, const char* label, bool& value)
+		{
+			pinnedPropertyLabel(settingId, label);
+			bool edited = ImGui::Checkbox(UI::labelID(label), &value);
+			ImGui::NextColumn();
+			return edited;
+		}
+
+		bool addPinnedIntProperty(const char* settingId, const char* label, int& value,
+		                          const char* format = "%d", int lowerBound = 0,
+		                          int upperBound = 0)
+		{
+			pinnedPropertyLabel(settingId, label);
+			int step = 1;
+			bool edited = ImGui::InputScalar(UI::labelID(label), ImGuiDataType_S32, &value, &step,
+			                                 &step, format);
+			if (edited && lowerBound != upperBound)
+				value = std::clamp(value, lowerBound, upperBound);
+			ImGui::NextColumn();
+			return edited;
+		}
+
+		bool addPinnedFloatProperty(const char* settingId, const char* label, float& value,
+		                            const char* format, float lowerBound = 0.0f,
+		                            float upperBound = 0.0f)
+		{
+			pinnedPropertyLabel(settingId, label);
+			bool edited = ImGui::InputFloat(UI::labelID(label), &value, 1.0f, 10.0f, format);
+			if (edited && lowerBound != upperBound)
+				value = std::clamp(value, lowerBound, upperBound);
+			ImGui::NextColumn();
+			return edited;
+		}
+
+		void addPinnedSliderProperty(const char* settingId, const char* label, float& value,
+		                             float min, float max, const char* format)
+		{
+			pinnedPropertyLabel(settingId, label);
+			ImGui::SliderFloat(UI::labelID(label), &value, min, max, format,
+			                   ImGuiSliderFlags_AlwaysClamp);
+			ImGui::NextColumn();
+		}
+
+		void addPinnedPercentSliderProperty(const char* settingId, const char* label,
+		                                    float& value)
+		{
+			pinnedPropertyLabel(settingId, label);
+			float scaled = value * 100.0f;
+			ImGui::SliderFloat(UI::labelID(label), &scaled, 0.0f, 100.0f, "%.0f%%",
+			                   ImGuiSliderFlags_AlwaysClamp);
+			ImGui::NextColumn();
+			value = scaled / 100.0f;
+		}
+
+		bool addPinnedSelectProperty(const char* settingId, const char* label, int& value,
+		                             const char* const* items, int count)
+		{
+			pinnedPropertyLabel(settingId, label);
+			bool edited = false;
+			std::string curr = getString(items[value]);
+			if (!curr.size())
+				curr = items[value];
+			if (ImGui::BeginCombo(UI::labelID(label), curr.c_str()))
+			{
+				for (int i = 0; i < count; ++i)
+				{
+					const bool selected = value == i;
+					std::string str = getString(items[i]);
+					if (!str.size())
+						str = items[i];
+					if (ImGui::Selectable(str.c_str(), selected))
+					{
+						value = i;
+						edited = true;
+					}
+				}
+				ImGui::EndCombo();
+			}
+			ImGui::NextColumn();
+			return edited;
+		}
+
+		void addPinnedLanguageProperty()
+		{
+			pinnedPropertyLabel(quickSettingLanguage, getString("language"));
+			std::string curr = getString("auto");
+			auto langIt = Localization::languages.find(config.language);
+			if (langIt != Localization::languages.end())
+				curr = langIt->second->getString("language_name");
+
+			if (ImGui::BeginCombo("##language", curr.c_str()))
+			{
+				if (ImGui::Selectable(getString("auto"), config.language == "auto"))
+					config.language = "auto";
+
+				for (const auto& [code, language] : Localization::languages)
+				{
+					const bool selected = config.language == code;
+					std::string str = language->getString("language_name");
+					if (ImGui::Selectable(str.c_str(), selected))
+						config.language = code;
+				}
+				ImGui::EndCombo();
+			}
+			ImGui::NextColumn();
+		}
+
+		int addPinnedFileProperty(const char* settingId, const char* label, std::string& value)
+		{
+			pinnedPropertyLabel(settingId, label);
+			int result = 0;
+			ImGui::SetNextItemWidth(ImGui::GetContentRegionAvail().x - UI::btnSmall.x -
+			                        ImGui::GetStyle().ItemSpacing.x);
+			if (ImGui::InputTextWithHint(UI::labelID(label), "n/a", &value,
+			                             ImGuiInputTextFlags_EnterReturnsTrue))
+				result = 1;
+			ImGui::SameLine();
+			ImGui::PushID(settingId);
+			if (ImGui::Button("...", UI::btnSmall))
+				result = 2;
+			ImGui::PopID();
+			ImGui::NextColumn();
+			return result;
+		}
+
+		bool addQuickSetting(ScoreContext& context, const char* settingId,
+		                     bool& backgroundChangePending)
+		{
+			const char* label = getQuickSettingLabel(settingId);
+			if (label[0] == '\0')
+				return false;
+
+			if (settingIs(settingId, quickSettingLanguage))
+			{
+				UI::propertyLabel(label);
+				std::string curr = getString("auto");
+				auto langIt = Localization::languages.find(config.language);
+				if (langIt != Localization::languages.end())
+					curr = langIt->second->getString("language_name");
+
+				if (ImGui::BeginCombo("##quick_language", curr.c_str()))
+				{
+					if (ImGui::Selectable(getString("auto"), config.language == "auto"))
+						config.language = "auto";
+
+					for (const auto& [code, language] : Localization::languages)
+					{
+						const bool selected = config.language == code;
+						std::string str = language->getString("language_name");
+						if (ImGui::Selectable(str.c_str(), selected))
+							config.language = code;
+					}
+					ImGui::EndCombo();
+				}
+				ImGui::NextColumn();
+			}
+			else if (settingIs(settingId, quickSettingAutoSaveEnabled))
+				UI::addCheckboxProperty(label, config.autoSaveEnabled);
+			else if (settingIs(settingId, quickSettingAutoSaveInterval))
+				UI::addIntProperty(label, config.autoSaveInterval);
+			else if (settingIs(settingId, quickSettingAutoSaveMaxCount))
+				UI::addIntProperty(label, config.autoSaveMaxCount);
+			else if (settingIs(settingId, quickSettingMasterVolume) ||
+			         settingIs(settingId, quickSettingBgmVolume) ||
+			         settingIs(settingId, quickSettingSeVolume))
+			{
+				float value = getVolumeSettingValue(settingId);
+				const float previousValue = value;
+				UI::addPercentSliderProperty(label, value);
+				if (value != previousValue)
+					applyVolumeSetting(context, settingId, value);
+			}
+			else if (settingIs(settingId, quickSettingBaseTheme))
+				UI::addSelectProperty(label, config.baseTheme, baseThemes,
+				                      static_cast<int>(BaseTheme::BASE_THEME_MAX));
+			else if (settingIs(settingId, quickSettingVsync))
+			{
+				bool vsync = Application::windowState.vsync;
+				UI::addCheckboxProperty(label, Application::windowState.vsync);
+				if (vsync != Application::windowState.vsync)
+					glfwSwapInterval(Application::windowState.vsync ? 1 : 0);
+			}
+			else if (settingIs(settingId, quickSettingMatchNotesSizeToTimeline))
+				UI::addCheckboxProperty(label, config.matchNotesSizeToTimeline);
+			else if (settingIs(settingId, quickSettingTimelineWidth))
+				UI::addIntProperty(label, config.timelineWidth, "%dpx", MIN_LANE_WIDTH,
+				                   MAX_LANE_WIDTH);
+			else if (settingIs(settingId, quickSettingNotesHeight))
+			{
+				if (config.matchNotesSizeToTimeline)
+					UI::beginNextItemDisabled();
+				UI::addIntProperty(label, config.notesHeight, "%dpx", MIN_NOTES_HEIGHT,
+				                   MAX_NOTES_HEIGHT);
+				if (config.matchNotesSizeToTimeline)
+					UI::endNextItemDisabled();
+			}
+			else if (settingIs(settingId, quickSettingDrawWaveform))
+				UI::addCheckboxProperty(label, config.drawWaveform);
+			else if (settingIs(settingId, quickSettingReturnToLastTick))
+				UI::addCheckboxProperty(label, config.returnToLastSelectedTickOnPause);
+			else if (settingIs(settingId, quickSettingDrawHiSpeedAutomation))
+				UI::addCheckboxProperty(label, config.drawHiSpeedAutomation);
+			else if (settingIs(settingId, quickSettingHiSpeedGraphLimit))
+				UI::addSliderProperty(label, config.hiSpeedGraphLimit, 1.0f, 10.0f, "%.1fx");
+			else if (settingIs(settingId, quickSettingHiSpeedGraphBgOpacity))
+				UI::addPercentSliderProperty(label, config.hiSpeedGraphBgOpacity);
+			else if (settingIs(settingId, quickSettingFollowCursorInPlayback))
+				UI::addCheckboxProperty(label, config.followCursorInPlayback);
+			else if (settingIs(settingId, quickSettingCursorPositionThreshold))
+				UI::addPercentSliderProperty(label, config.cursorPositionThreshold);
+			else if (settingIs(settingId, quickSettingScrollSpeedNormal))
+			{
+				UI::addFloatProperty(label, config.scrollSpeedNormal, "%.1fx");
+				config.scrollSpeedNormal = std::max(0.1f, config.scrollSpeedNormal);
+			}
+			else if (settingIs(settingId, quickSettingScrollSpeedShift))
+			{
+				UI::addFloatProperty(label, config.scrollSpeedShift, "%.1fx");
+				config.scrollSpeedShift = std::max(0.1f, config.scrollSpeedShift);
+			}
+			else if (settingIs(settingId, quickSettingUseSmoothScrolling))
+				UI::addCheckboxProperty(label, config.useSmoothScrolling);
+			else if (settingIs(settingId, quickSettingSmoothScrollingTime))
+				UI::addSliderProperty(label, config.smoothScrollingTime, 10.0f, 150.0f,
+				                      "%.2fms");
+			else if (settingIs(settingId, quickSettingNotesSe))
+				UI::addSelectProperty(label, config.seProfileIndex,
+				                      Audio::soundEffectsProfileNames,
+				                      Audio::soundEffectsProfileCount);
+			else if (settingIs(settingId, quickSettingDrawBackground))
+				UI::addCheckboxProperty(label, config.drawBackground);
+			else if (settingIs(settingId, quickSettingBackgroundImage))
+			{
+				std::string backgroundFile = config.backgroundImage;
+				int result = UI::addFileProperty(label, backgroundFile);
+				if (result == 1)
+				{
+					config.backgroundImage = backgroundFile;
+					backgroundChangePending = true;
+				}
+				else if (result == 2)
+				{
+					IO::FileDialog fileDialog{};
+					fileDialog.title = "Open Image File";
+					fileDialog.filters = { IO::imageFilter, IO::allFilter };
+					fileDialog.parentWindowHandle = Application::windowState.windowHandle;
+
+					if (fileDialog.openFile() == IO::FileDialogResult::OK)
+					{
+						config.backgroundImage = fileDialog.outputFilename;
+						backgroundChangePending = true;
+					}
+				}
+			}
+			else if (settingIs(settingId, quickSettingBackgroundBrightness))
+				UI::addPercentSliderProperty(label, config.backgroundBrightness);
+			else if (settingIs(settingId, quickSettingLaneOpacity))
+				UI::addPercentSliderProperty(label, config.laneOpacity);
+			else if (settingIs(settingId, quickSettingShowTickInProperties))
+				UI::addCheckboxProperty(label, config.showTickInProperties);
+			else if (settingIs(settingId, quickSettingPreviewDrawToolbar))
+				UI::addCheckboxProperty(label, config.pvDrawToolbar);
+			else if (settingIs(settingId, quickSettingPreviewNoteSpeed))
+				UI::addSliderProperty(label, config.pvNoteSpeed, 1, 12, "%.2f");
+			else if (settingIs(settingId, quickSettingPreviewStageCover))
+				UI::addPercentSliderProperty(label, config.pvStageCover);
+			else if (settingIs(settingId, quickSettingPreviewHoldAlpha))
+			{
+				float holdAlpha = config.pvHoldAlpha * 100.0f;
+				UI::addSliderProperty(label, holdAlpha, 10.0f, 100.0f, "%.0f%%");
+				config.pvHoldAlpha = holdAlpha / 100.0f;
+			}
+			else if (settingIs(settingId, quickSettingPreviewGuideAlpha))
+			{
+				float guideAlpha = config.pvGuideAlpha * 100.0f;
+				UI::addSliderProperty(label, guideAlpha, 10.0f, 100.0f, "%.0f%%");
+				config.pvGuideAlpha = guideAlpha / 100.0f;
+			}
+			else if (settingIs(settingId, quickSettingPreviewMirrorScore))
+				UI::addCheckboxProperty(label, config.pvMirrorScore);
+			else if (settingIs(settingId, quickSettingPreviewSimultaneousLine))
+				UI::addCheckboxProperty(label, config.pvSimultaneousLine);
+			else if (settingIs(settingId, quickSettingPreviewBackgroundBrightness))
+				UI::addPercentSliderProperty(label, config.pvBackgroundBrightness);
+			else if (settingIs(settingId, quickSettingPreviewStageOpacity))
+				UI::addPercentSliderProperty(label, config.pvStageOpacity);
+			else
+				return false;
+
+			return true;
+		}
+	}
+
 	void ScorePropertiesWindow::update(ScoreContext& context)
 	{
 		if (ImGui::CollapsingHeader(
@@ -42,19 +547,6 @@ namespace MikuMikuWorld
 			}
 			context.workingData.jacket.draw();
 
-			UI::addIntProperty(getString("lane_extension"), context.workingData.laneExtension, 0,
-			                   100);
-			UI::addIntProperty(getString("life_point"), context.workingData.baseLifePoint, 10,
-			                   999999);
-			UI::endPropertyColumns();
-		}
-
-		if (ImGui::CollapsingHeader(IO::concat(ICON_FA_VOLUME_UP, getString("audio"), " ").c_str(),
-		                            ImGuiTreeNodeFlags_DefaultOpen))
-		{
-			UI::beginPropertyColumns();
-
-			bool changeMusic = false;
 			std::string filename = context.workingData.musicFilename;
 			int filePickResult = UI::addFileProperty(getString("music_file"), filename);
 			if (filePickResult == 1 && filename != context.workingData.musicFilename)
@@ -75,7 +567,14 @@ namespace MikuMikuWorld
 					isPendingLoadMusic = true;
 				}
 			}
+			UI::endPropertyColumns();
+		}
 
+		if (ImGui::CollapsingHeader(
+		        IO::concat(ICON_FA_GAMEPAD, getString("level_data"), " ").c_str(),
+		        ImGuiTreeNodeFlags_DefaultOpen))
+		{
+			UI::beginPropertyColumns();
 			float offset = context.workingData.musicOffset;
 			UI::addDragFloatProperty(getString("music_offset"), offset, "%.3fms");
 			if (offset != context.workingData.musicOffset)
@@ -102,24 +601,10 @@ namespace MikuMikuWorld
 					               IO::MessageBoxIcon::Warning);
 			}
 
-			// volume controls
-			float master = context.audio.getMasterVolume();
-			float bgm = context.audio.getMusicVolume();
-			float se = context.audio.getSoundEffectsVolume();
-
-			UI::addPercentSliderProperty(getString("volume_master"), master);
-			UI::addPercentSliderProperty(getString("volume_bgm"), bgm);
-			UI::addPercentSliderProperty(getString("volume_se"), se);
+			if (UI::addIntProperty(getString("life_point"), context.workingData.baseLifePoint, 10,
+			                       999999))
+				context.score.metadata.baseLifePoint = context.workingData.baseLifePoint;
 			UI::endPropertyColumns();
-
-			if (master != context.audio.getMasterVolume())
-				context.audio.setMasterVolume(master);
-
-			if (bgm != context.audio.getMusicVolume())
-				context.audio.setMusicVolume(bgm);
-
-			if (se != context.audio.getSoundEffectsVolume())
-				context.audio.setSoundEffectsVolume(se);
 		}
 
 		if (ImGui::CollapsingHeader(
@@ -958,70 +1443,106 @@ namespace MikuMikuWorld
 			context.pushHistory("Edited object", prev, context.score);
 	}
 
-	void ScoreOptionsWindow::update(ScoreContext& context, EditArgs& edit, TimelineMode currentMode)
+	void ScoreOptionsWindow::update(ScoreContext& context, EditArgs& edit, TimelineMode currentMode,
+	                                bool& backgroundChangePending)
 	{
-		UI::beginPropertyColumns();
-		switch (currentMode)
+		if (ImGui::CollapsingHeader(getString("edit_assist_settings"),
+		                            ImGuiTreeNodeFlags_DefaultOpen))
 		{
-		default:
-		case TimelineMode::InsertTap:
-		case TimelineMode::InsertDamage:
-		case TimelineMode::MakeCritical:
-		case TimelineMode::MakeFriction:
-		case TimelineMode::MakeDummy:
-			UI::addIntProperty(getString("note_width"), edit.noteWidth, MIN_NOTE_WIDTH,
-			                   MAX_NOTE_WIDTH);
-			break;
-		case TimelineMode::InsertFlick:
-			UI::addIntProperty(getString("note_width"), edit.noteWidth, MIN_NOTE_WIDTH,
-			                   MAX_NOTE_WIDTH);
-			UI::addSelectProperty<FlickType>(getString("flick"), edit.flickType, flickTypes,
-			                                 arrayLength(flickTypes));
-			break;
-		case TimelineMode::InsertLong:
-			UI::addIntProperty(getString("note_width"), edit.noteWidth, MIN_NOTE_WIDTH,
-			                   MAX_NOTE_WIDTH);
-			UI::addSelectProperty<HoldEndType>(getString("hold_start_type"), edit.holdStartType,
-			                                   holdEndTypes, arrayLength(holdEndTypes));
-			UI::addSelectProperty<HoldEndType>(getString("hold_end_type"), edit.holdEndType,
-			                                   holdEndTypes, arrayLength(holdEndTypes));
-			UI::addSelectProperty(getString("ease_type"), edit.easeType, easeTypes,
-			                      arrayLength(easeTypes));
-			break;
-		case TimelineMode::InsertLongMid:
-			UI::addIntProperty(getString("note_width"), edit.noteWidth, MIN_NOTE_WIDTH,
-			                   MAX_NOTE_WIDTH);
-			UI::addSelectProperty(getString("step_type"), edit.stepType, stepTypes,
-			                      arrayLength(stepTypes));
-			break;
-		case TimelineMode::InsertGuide:
-			UI::addIntProperty(getString("note_width"), edit.noteWidth, MIN_NOTE_WIDTH,
-			                   MAX_NOTE_WIDTH);
-			UI::addSelectProperty(getString("ease_type"), edit.easeType, easeTypes,
-			                      arrayLength(easeTypes));
-			UI::addSelectProperty<GuideColor>(getString("guide_color"), edit.colorType,
-			                                  guideColorsForString, arrayLength(guideColors));
-			UI::addSelectProperty<FadeType>(getString("fade_type"), edit.fadeType, fadeTypes,
-			                                arrayLength(fadeTypes));
-			break;
-		case TimelineMode::InsertBPM:
-			UI::addFloatProperty(getString("bpm"), edit.bpm, "%g BPM");
-			edit.bpm = std::clamp(edit.bpm, MIN_BPM, MAX_BPM);
-			break;
+			UI::beginPropertyColumns();
+			if (UI::addIntProperty(getString("lane_extension"), context.workingData.laneExtension,
+			                       0, 100))
+				context.score.metadata.laneExtension = context.workingData.laneExtension;
 
-		case TimelineMode::InsertTimeSign:
-			UI::timeSignatureSelect(edit.timeSignatureNumerator, edit.timeSignatureDenominator);
-			break;
+			bool audioLocked = context.score.audioTrack.locked;
+			if (UI::addCheckboxProperty(getString("audio_lock"), audioLocked))
+			{
+				Score prev = context.score;
+				context.score.audioTrack.locked = audioLocked;
+				context.pushHistory("Toggle Audio Lock", prev, context.score);
+			}
 
-		case TimelineMode::InsertHiSpeed:
-			UI::addFloatProperty(getString("hi_speed_speed"), edit.hiSpeed, "%gx");
-			UI::addSelectProperty(getString("hi_speed_ease"), edit.hiSpeedEase, hiSpeedEaseNames,
-			                      arrayLength(hiSpeedEaseNames));
-			UI::addFloatProperty(getString("hi_speed_skip_beat"), edit.hiSpeedSkip, IO::formatString("%%.3f %s", getString("beat")).c_str());
-			UI::addCheckboxProperty(getString("hi_speed_hide_notes"), edit.hiSpeedHideNotes);
-			break;
+			switch (currentMode)
+			{
+			default:
+			case TimelineMode::InsertTap:
+			case TimelineMode::InsertDamage:
+			case TimelineMode::MakeCritical:
+			case TimelineMode::MakeFriction:
+			case TimelineMode::MakeDummy:
+				UI::addIntProperty(getString("note_width"), edit.noteWidth, MIN_NOTE_WIDTH,
+				                   MAX_NOTE_WIDTH);
+				break;
+			case TimelineMode::InsertFlick:
+				UI::addIntProperty(getString("note_width"), edit.noteWidth, MIN_NOTE_WIDTH,
+				                   MAX_NOTE_WIDTH);
+				UI::addSelectProperty<FlickType>(getString("flick"), edit.flickType, flickTypes,
+				                                 arrayLength(flickTypes));
+				break;
+			case TimelineMode::InsertLong:
+				UI::addIntProperty(getString("note_width"), edit.noteWidth, MIN_NOTE_WIDTH,
+				                   MAX_NOTE_WIDTH);
+				UI::addSelectProperty<HoldEndType>(getString("hold_start_type"),
+				                                   edit.holdStartType, holdEndTypes,
+				                                   arrayLength(holdEndTypes));
+				UI::addSelectProperty<HoldEndType>(getString("hold_end_type"),
+				                                   edit.holdEndType, holdEndTypes,
+				                                   arrayLength(holdEndTypes));
+				UI::addSelectProperty(getString("ease_type"), edit.easeType, easeTypes,
+				                      arrayLength(easeTypes));
+				break;
+			case TimelineMode::InsertLongMid:
+				UI::addIntProperty(getString("note_width"), edit.noteWidth, MIN_NOTE_WIDTH,
+				                   MAX_NOTE_WIDTH);
+				UI::addSelectProperty(getString("step_type"), edit.stepType, stepTypes,
+				                      arrayLength(stepTypes));
+				break;
+			case TimelineMode::InsertGuide:
+				UI::addIntProperty(getString("note_width"), edit.noteWidth, MIN_NOTE_WIDTH,
+				                   MAX_NOTE_WIDTH);
+				UI::addSelectProperty(getString("ease_type"), edit.easeType, easeTypes,
+				                      arrayLength(easeTypes));
+				UI::addSelectProperty<GuideColor>(getString("guide_color"), edit.colorType,
+				                                  guideColorsForString, arrayLength(guideColors));
+				UI::addSelectProperty<FadeType>(getString("fade_type"), edit.fadeType, fadeTypes,
+				                                arrayLength(fadeTypes));
+				break;
+			case TimelineMode::InsertBPM:
+				UI::addFloatProperty(getString("bpm"), edit.bpm, "%g BPM");
+				edit.bpm = std::clamp(edit.bpm, MIN_BPM, MAX_BPM);
+				break;
+
+			case TimelineMode::InsertTimeSign:
+				UI::timeSignatureSelect(edit.timeSignatureNumerator,
+				                        edit.timeSignatureDenominator);
+				break;
+
+			case TimelineMode::InsertHiSpeed:
+				UI::addFloatProperty(getString("hi_speed_speed"), edit.hiSpeed, "%gx");
+				UI::addSelectProperty(getString("hi_speed_ease"), edit.hiSpeedEase,
+				                      hiSpeedEaseNames, arrayLength(hiSpeedEaseNames));
+				UI::addFloatProperty(
+				    getString("hi_speed_skip_beat"), edit.hiSpeedSkip,
+				    IO::formatString("%%.3f %s", getString("beat")).c_str());
+				UI::addCheckboxProperty(getString("hi_speed_hide_notes"), edit.hiSpeedHideNotes);
+				break;
+			}
+			UI::endPropertyColumns();
 		}
-		UI::endPropertyColumns();
+
+		if (ImGui::CollapsingHeader(getString("pinned_settings"),
+		                            ImGuiTreeNodeFlags_DefaultOpen))
+		{
+			UI::beginPropertyColumns();
+			int shownSettings = 0;
+			for (const std::string& settingId : config.pinnedQuickSettings)
+				shownSettings +=
+				    addQuickSetting(context, settingId.c_str(), backgroundChangePending) ? 1 : 0;
+			UI::endPropertyColumns();
+
+			if (shownSettings == 0)
+				ImGui::TextDisabled("%s", getString("no_pinned_settings"));
+		}
 	}
 
 	void PresetsWindow::update(ScoreContext& context, PresetManager& presetManager)
@@ -1688,7 +2209,7 @@ namespace MikuMikuWorld
 		}
 	}
 
-	DialogResult SettingsWindow::update()
+	DialogResult SettingsWindow::update(ScoreContext& context)
 	{
 		if (open)
 		{
@@ -1719,30 +2240,7 @@ namespace MikuMikuWorld
 					                            ImGuiTreeNodeFlags_DefaultOpen))
 					{
 						UI::beginPropertyColumns();
-						UI::propertyLabel(getString("language"));
-
-						std::string curr = getString("auto");
-						auto langIt = Localization::languages.find(config.language);
-						if (langIt != Localization::languages.end())
-							curr = langIt->second->getString("language_name");
-
-						if (ImGui::BeginCombo("##language", curr.c_str()))
-						{
-							if (ImGui::Selectable(getString("auto"), config.language == "auto"))
-								config.language = "auto";
-
-							for (const auto& [code, language] : Localization::languages)
-							{
-								const bool selected = curr == code;
-								std::string str = language->getString("language_name");
-
-								if (ImGui::Selectable(str.c_str(), selected))
-									config.language = code;
-							}
-
-							ImGui::EndCombo();
-						}
-
+						addPinnedLanguageProperty();
 						UI::endPropertyColumns();
 					}
 
@@ -1758,19 +2256,38 @@ namespace MikuMikuWorld
 					                            ImGuiTreeNodeFlags_DefaultOpen))
 					{
 						UI::beginPropertyColumns();
-						UI::addCheckboxProperty(getString("auto_save_enable"),
-						                        config.autoSaveEnabled);
-						UI::addIntProperty(getString("auto_save_interval"),
-						                   config.autoSaveInterval);
-						UI::addIntProperty(getString("auto_save_count"), config.autoSaveMaxCount);
+						addPinnedCheckboxProperty(quickSettingAutoSaveEnabled,
+						                         getString("auto_save_enable"),
+						                         config.autoSaveEnabled);
+						addPinnedIntProperty(quickSettingAutoSaveInterval,
+						                     getString("auto_save_interval"),
+						                     config.autoSaveInterval);
+						addPinnedIntProperty(quickSettingAutoSaveMaxCount,
+						                     getString("auto_save_count"), config.autoSaveMaxCount);
+						UI::endPropertyColumns();
+					}
+
+					if (ImGui::CollapsingHeader(getString("audio"),
+					                            ImGuiTreeNodeFlags_DefaultOpen))
+					{
+						UI::beginPropertyColumns();
+						addPinnedPercentSliderProperty(context, quickSettingMasterVolume,
+						                               getString("volume_master"));
+						addPinnedPercentSliderProperty(context, quickSettingBgmVolume,
+						                               getString("volume_bgm"));
+						addPinnedPercentSliderProperty(context, quickSettingSeVolume,
+						                               getString("volume_se"));
 						UI::endPropertyColumns();
 					}
 
 					if (ImGui::CollapsingHeader(getString("theme"), ImGuiTreeNodeFlags_DefaultOpen))
 					{
 						UI::beginPropertyColumns();
-						UI::addSelectProperty(getString("base_theme"), config.baseTheme, baseThemes,
-						                      (int)BaseTheme::BASE_THEME_MAX);
+						int baseTheme = static_cast<int>(config.baseTheme);
+						if (addPinnedSelectProperty(quickSettingBaseTheme, getString("base_theme"),
+						                            baseTheme, baseThemes,
+						                            static_cast<int>(BaseTheme::BASE_THEME_MAX)))
+							config.baseTheme = static_cast<BaseTheme>(baseTheme);
 						UI::endPropertyColumns();
 
 						ImGui::TextWrapped("%s", getString("accent_color_help"));
@@ -1841,7 +2358,8 @@ namespace MikuMikuWorld
 					{
 						bool vsync = Application::windowState.vsync;
 						UI::beginPropertyColumns();
-						UI::addCheckboxProperty(getString("vsync"), Application::windowState.vsync);
+						addPinnedCheckboxProperty(quickSettingVsync, getString("vsync"),
+						                         Application::windowState.vsync);
 						UI::endPropertyColumns();
 
 						if (vsync != Application::windowState.vsync)
@@ -1857,26 +2375,38 @@ namespace MikuMikuWorld
 					                            ImGuiTreeNodeFlags_DefaultOpen))
 					{
 						UI::beginPropertyColumns();
-						UI::addCheckboxProperty(getString("match_notes_size_to_timeline"),
-						                        config.matchNotesSizeToTimeline);
-						UI::addIntProperty(getString("lane_width"), config.timelineWidth, "%dpx",
-						                   MIN_LANE_WIDTH, MAX_LANE_WIDTH);
+						addPinnedCheckboxProperty(quickSettingMatchNotesSizeToTimeline,
+						                         getString("match_notes_size_to_timeline"),
+						                         config.matchNotesSizeToTimeline);
+						addPinnedIntProperty(quickSettingTimelineWidth, getString("lane_width"),
+						                     config.timelineWidth, "%dpx", MIN_LANE_WIDTH,
+						                     MAX_LANE_WIDTH);
 
 						if (config.matchNotesSizeToTimeline)
 							UI::beginNextItemDisabled();
-						UI::addIntProperty(getString("notes_height"), config.notesHeight, "%dpx",
-						                   MIN_NOTES_HEIGHT, MAX_NOTES_HEIGHT);
+						addPinnedIntProperty(quickSettingNotesHeight, getString("notes_height"),
+						                     config.notesHeight, "%dpx", MIN_NOTES_HEIGHT,
+						                     MAX_NOTES_HEIGHT);
 						if (config.matchNotesSizeToTimeline)
 							UI::endNextItemDisabled();
 						ImGui::Separator();
 
-						UI::addCheckboxProperty(getString("draw_waveform"), config.drawWaveform);
-						UI::addCheckboxProperty(getString("return_to_last_tick"), config.returnToLastSelectedTickOnPause);
+						addPinnedCheckboxProperty(quickSettingDrawWaveform,
+						                         getString("draw_waveform"), config.drawWaveform);
+						addPinnedCheckboxProperty(quickSettingReturnToLastTick,
+						                         getString("return_to_last_tick"),
+						                         config.returnToLastSelectedTickOnPause);
 						ImGui::Separator();
 
-						UI::addCheckboxProperty(getString("draw_hispeed_automation"), config.drawHiSpeedAutomation);
-						UI::addSliderProperty(getString("hispeed_graph_limit"), config.hiSpeedGraphLimit, 1.0f, 10.0f, "%.1fx");
-						UI::addPercentSliderProperty(getString("hispeed_graph_bg_opacity"), config.hiSpeedGraphBgOpacity);
+						addPinnedCheckboxProperty(quickSettingDrawHiSpeedAutomation,
+						                         getString("draw_hispeed_automation"),
+						                         config.drawHiSpeedAutomation);
+						addPinnedSliderProperty(quickSettingHiSpeedGraphLimit,
+						                        getString("hispeed_graph_limit"),
+						                        config.hiSpeedGraphLimit, 1.0f, 10.0f, "%.1fx");
+						addPinnedPercentSliderProperty(quickSettingHiSpeedGraphBgOpacity,
+						                              getString("hispeed_graph_bg_opacity"),
+						                              config.hiSpeedGraphBgOpacity);
 						UI::endPropertyColumns();
 					}
 
@@ -1884,31 +2414,41 @@ namespace MikuMikuWorld
 					                            ImGuiTreeNodeFlags_DefaultOpen))
 					{
 						UI::beginPropertyColumns();
-						UI::addCheckboxProperty(getString("cursor_auto_scroll"), config.followCursorInPlayback);
-						UI::addPercentSliderProperty(getString("cursor_auto_scroll_amount"), config.cursorPositionThreshold);
+						addPinnedCheckboxProperty(quickSettingFollowCursorInPlayback,
+						                         getString("cursor_auto_scroll"),
+						                         config.followCursorInPlayback);
+						addPinnedPercentSliderProperty(quickSettingCursorPositionThreshold,
+						                              getString("cursor_auto_scroll_amount"),
+						                              config.cursorPositionThreshold);
 						ImGui::Separator();
 
-						UI::addFloatProperty(getString("scroll_speed_normal"),
-						                     config.scrollSpeedNormal, "%.1fx");
-						UI::addFloatProperty(getString("scroll_speed_shift"),
-						                     config.scrollSpeedShift, "%.1fx");
+						addPinnedFloatProperty(quickSettingScrollSpeedNormal,
+						                       getString("scroll_speed_normal"),
+						                       config.scrollSpeedNormal, "%.1fx");
+						addPinnedFloatProperty(quickSettingScrollSpeedShift,
+						                       getString("scroll_speed_shift"),
+						                       config.scrollSpeedShift, "%.1fx");
 						config.scrollSpeedNormal = std::max(0.1f, config.scrollSpeedNormal);
 						config.scrollSpeedShift = std::max(0.1f, config.scrollSpeedShift);
 						ImGui::Separator();
 
-						UI::addCheckboxProperty(getString("use_smooth_scroll"),
-						                        config.useSmoothScrolling);
-						UI::addSliderProperty(getString("smooth_scroll_time"),
-						                      config.smoothScrollingTime, 10.0f, 150.0f, "%.2fms");
+						addPinnedCheckboxProperty(quickSettingUseSmoothScrolling,
+						                         getString("use_smooth_scroll"),
+						                         config.useSmoothScrolling);
+						addPinnedSliderProperty(quickSettingSmoothScrollingTime,
+						                        getString("smooth_scroll_time"),
+						                        config.smoothScrollingTime, 10.0f, 150.0f,
+						                        "%.2fms");
 						UI::endPropertyColumns();
 					}
 
 					if (ImGui::CollapsingHeader(getString("audio"), ImGuiTreeNodeFlags_DefaultOpen))
 					{
 						UI::beginPropertyColumns();
-						UI::addSelectProperty(getString("notes_se"), config.seProfileIndex,
-						                      Audio::soundEffectsProfileNames,
-						                      Audio::soundEffectsProfileCount);
+						addPinnedSelectProperty(quickSettingNotesSe, getString("notes_se"),
+						                        config.seProfileIndex,
+						                        Audio::soundEffectsProfileNames,
+						                        Audio::soundEffectsProfileCount);
 						UI::endPropertyColumns();
 					}
 
@@ -1916,12 +2456,14 @@ namespace MikuMikuWorld
 					                            ImGuiTreeNodeFlags_DefaultOpen))
 					{
 						UI::beginPropertyColumns();
-						UI::addCheckboxProperty(getString("draw_background"),
-						                        config.drawBackground);
+						addPinnedCheckboxProperty(quickSettingDrawBackground,
+						                         getString("draw_background"),
+						                         config.drawBackground);
 
 						std::string backgroundFile = config.backgroundImage;
-						int result =
-						    UI::addFileProperty(getString("background_image"), backgroundFile);
+						int result = addPinnedFileProperty(quickSettingBackgroundImage,
+						                                   getString("background_image"),
+						                                   backgroundFile);
 						if (result == 1)
 						{
 							config.backgroundImage = backgroundFile;
@@ -1941,12 +2483,14 @@ namespace MikuMikuWorld
 							}
 						}
 
-						UI::addPercentSliderProperty(getString("background_brightnes"),
-						                             config.backgroundBrightness);
+						addPinnedPercentSliderProperty(quickSettingBackgroundBrightness,
+						                              getString("background_brightnes"),
+						                              config.backgroundBrightness);
 						ImGui::Separator();
 
-						UI::addPercentSliderProperty(getString("lanes_opacity"),
-						                             config.laneOpacity);
+						addPinnedPercentSliderProperty(quickSettingLaneOpacity,
+						                              getString("lanes_opacity"),
+						                              config.laneOpacity);
 						UI::endPropertyColumns();
 					}
 
@@ -1954,8 +2498,9 @@ namespace MikuMikuWorld
 					                            ImGuiTreeNodeFlags_DefaultOpen))
 					{
 						UI::beginPropertyColumns();
-						UI::addCheckboxProperty(getString("show_tick_in_properties"),
-						                        config.showTickInProperties);
+						addPinnedCheckboxProperty(quickSettingShowTickInProperties,
+						                         getString("show_tick_in_properties"),
+						                         config.showTickInProperties);
 						UI::endPropertyColumns();
 					}
 
@@ -1967,39 +2512,56 @@ namespace MikuMikuWorld
 					if (ImGui::CollapsingHeader(getString("general"), ImGuiTreeNodeFlags_DefaultOpen))
 					{
 						UI::beginPropertyColumns();
-						UI::addCheckboxProperty(getString("preview_draw_toolbar"), config.pvDrawToolbar);
+						addPinnedCheckboxProperty(quickSettingPreviewDrawToolbar,
+						                         getString("preview_draw_toolbar"),
+						                         config.pvDrawToolbar);
 						UI::endPropertyColumns();
 					}
 
 					if (ImGui::CollapsingHeader(getString("visuals"), ImGuiTreeNodeFlags_DefaultOpen))
 					{
 						UI::beginPropertyColumns();
-						UI::addSliderProperty(getString("notes_speed"), config.pvNoteSpeed, 1, 12, "%.2f");
-						UI::addPercentSliderProperty(getString("stage_cover"), config.pvStageCover);
+						addPinnedSliderProperty(quickSettingPreviewNoteSpeed,
+						                        getString("notes_speed"), config.pvNoteSpeed, 1, 12,
+						                        "%.2f");
+						addPinnedPercentSliderProperty(quickSettingPreviewStageCover,
+						                              getString("stage_cover"),
+						                              config.pvStageCover);
 						ImGui::Separator();
 
 						float hold_alpha = config.pvHoldAlpha * 100.f;
-						UI::addSliderProperty(getString("holds_alpha"), hold_alpha, 10, 100, "%.0f%%");
+						addPinnedSliderProperty(quickSettingPreviewHoldAlpha,
+						                        getString("holds_alpha"), hold_alpha, 10, 100,
+						                        "%.0f%%");
 						config.pvHoldAlpha = hold_alpha / 100.f;
 						float guide_alpha = config.pvGuideAlpha * 100.f;
-						UI::addSliderProperty(getString("guides_alpha"), guide_alpha, 10, 100, "%.0f%%");
+						addPinnedSliderProperty(quickSettingPreviewGuideAlpha,
+						                        getString("guides_alpha"), guide_alpha, 10, 100,
+						                        "%.0f%%");
 						config.pvGuideAlpha = guide_alpha / 100.f;
 						ImGui::Separator();
 
-						UI::addCheckboxProperty(getString("mirror_score"), config.pvMirrorScore);
+						addPinnedCheckboxProperty(quickSettingPreviewMirrorScore,
+						                         getString("mirror_score"), config.pvMirrorScore);
 						// UI::addCheckboxProperty(getString("flicks_animation"), config.pvFlickAnimation);
 						// UI::addCheckboxProperty(getString("holds_animation"), config.pvHoldAnimation);
-						UI::addCheckboxProperty(getString("simultaneous_lines"), config.pvSimultaneousLine);
+						addPinnedCheckboxProperty(quickSettingPreviewSimultaneousLine,
+						                         getString("simultaneous_lines"),
+						                         config.pvSimultaneousLine);
 						UI::endPropertyColumns();
 					}
 
 					if (ImGui::CollapsingHeader(getString("background"), ImGuiTreeNodeFlags_DefaultOpen))
 					{
 						UI::beginPropertyColumns();
-						UI::addCheckboxProperty(getString("draw_background"), config.drawBackground);
+						addPinnedCheckboxProperty(quickSettingDrawBackground,
+						                         getString("draw_background"),
+						                         config.drawBackground);
 
 						std::string backgroundFile = config.backgroundImage;
-						int result = UI::addFileProperty(getString("background_image"), backgroundFile);
+						int result = addPinnedFileProperty(quickSettingBackgroundImage,
+						                                   getString("background_image"),
+						                                   backgroundFile);
 						if (result == 1)
 						{
 							config.backgroundImage = backgroundFile;
@@ -2019,17 +2581,24 @@ namespace MikuMikuWorld
 							}
 						}
 
-						UI::addPercentSliderProperty(getString("background_brightnes"), config.pvBackgroundBrightness);
+						addPinnedPercentSliderProperty(quickSettingPreviewBackgroundBrightness,
+						                              getString("background_brightnes"),
+						                              config.pvBackgroundBrightness);
 						ImGui::Separator();
 
-						UI::addPercentSliderProperty(getString("stage_opacity"), config.pvStageOpacity);
+						addPinnedPercentSliderProperty(quickSettingPreviewStageOpacity,
+						                              getString("stage_opacity"),
+						                              config.pvStageOpacity);
 						UI::endPropertyColumns();
 					}
 
 					if (ImGui::CollapsingHeader(getString("audio"), ImGuiTreeNodeFlags_DefaultOpen))
 					{
 						UI::beginPropertyColumns();
-						UI::addSelectProperty(getString("notes_se"), config.seProfileIndex, Audio::soundEffectsProfileNames, Audio::soundEffectsProfileCount);
+						addPinnedSelectProperty(quickSettingNotesSe, getString("notes_se"),
+						                        config.seProfileIndex,
+						                        Audio::soundEffectsProfileNames,
+						                        Audio::soundEffectsProfileCount);
 						UI::endPropertyColumns();
 					}
 					
@@ -2107,7 +2676,7 @@ namespace MikuMikuWorld
 				renameIndex = context.score.layers.size() - 1;
 				layerName = newLayer.name;
 				context.selectedLayer = renameIndex;
-				context.audioLayerSelected = false;
+				context.timelineEditTarget = TimelineEditTarget::Notes;
 				focusRenameInput = true;
 			}
 			ImGui::SameLine();
@@ -2122,7 +2691,7 @@ namespace MikuMikuWorld
 				renameIndex = context.score.layers.size() - 1;
 				layerName = newLayer.name;
 				context.selectedLayer = renameIndex;
-				context.audioLayerSelected = false;
+				context.timelineEditTarget = TimelineEditTarget::Notes;
 				focusRenameInput = true;
 			}
 			ImGui::SameLine();
@@ -2182,10 +2751,8 @@ namespace MikuMikuWorld
 				}
 				ImGui::Separator();
 			}
-			const float audioLayerSectionHeight = (ImGui::GetFrameHeight() * 2.0f) +
-			                                      ImGui::GetStyle().ItemSpacing.y * 4.0f;
-			float windowHeight = ImGui::GetContentRegionAvail().y - ImGui::GetStyle().WindowPadding.y -
-			                     audioLayerSectionHeight;
+			float windowHeight =
+			    ImGui::GetContentRegionAvail().y - ImGui::GetStyle().WindowPadding.y;
 
 			if (ImGui::BeginChild("layers_child_window", ImVec2(-1, windowHeight), true))
 			{
@@ -2214,7 +2781,7 @@ namespace MikuMikuWorld
 					if (ImGui::Selectable((std::string("##row_") + std::to_string(index)).c_str(), isSelected, ImGuiSelectableFlags_AllowItemOverlap, ImVec2(width, layersButtonHeight)))
 					{
 						context.selectedLayer = index;
-						context.audioLayerSelected = false;
+						context.timelineEditTarget = TimelineEditTarget::Notes;
 						context.selectedAudioClip = static_cast<id_t>(-1);
 					}
 
@@ -2366,61 +2933,6 @@ namespace MikuMikuWorld
 				}
 			}
 			ImGui::EndChild();
-
-			ImGui::Separator();
-			ImGui::TextUnformatted("音源レイヤー");
-			ImVec2 audioStartPos = ImGui::GetCursorScreenPos();
-			float audioWidth = ImGui::GetContentRegionAvail().x;
-			const bool audioSelected = context.audioLayerSelected;
-			if (audioSelected)
-			{
-				ImGui::PushStyleColor(ImGuiCol_Header, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
-				ImGui::PushStyleColor(ImGuiCol_HeaderHovered, ImGui::GetStyleColorVec4(ImGuiCol_ButtonActive));
-			}
-			if (ImGui::Selectable("##audio_layer_bgm", audioSelected,
-			                      ImGuiSelectableFlags_AllowItemOverlap,
-			                      ImVec2(audioWidth, layersButtonHeight)))
-			{
-				context.audioLayerSelected = true;
-				context.clearSelection();
-			}
-			if (audioSelected)
-				ImGui::PopStyleColor(2);
-
-			ImGui::SetCursorScreenPos(ImVec2(audioStartPos.x + ImGui::GetStyle().FramePadding.x,
-			                                 audioStartPos.y));
-			ImGui::AlignTextToFramePadding();
-			ImGui::Text("%s", context.score.audioTrack.name.empty()
-			                    ? "BGM"
-			                    : context.score.audioTrack.name.c_str());
-			ImGui::SameLine(audioWidth - (UI::btnSmall.x * 3 + ImGui::GetStyle().ItemSpacing.x * 2));
-			if (UI::transparentButton(context.score.audioTrack.visible ? ICON_FA_EYE : ICON_FA_EYE_SLASH,
-			                          ImVec2(UI::btnSmall.x, layersButtonHeight), false))
-			{
-				Score prev = context.score;
-				context.score.audioTrack.visible = !context.score.audioTrack.visible;
-				context.pushHistory("Toggle Audio Layer Visibility", prev, context.score);
-			}
-			ImGui::SameLine();
-			if (UI::transparentButton(context.score.audioTrack.locked ? ICON_FA_LOCK : ICON_FA_LOCK_OPEN,
-			                          ImVec2(UI::btnSmall.x, layersButtonHeight), false))
-			{
-				Score prev = context.score;
-				context.score.audioTrack.locked = !context.score.audioTrack.locked;
-				context.pushHistory("Toggle Audio Layer Lock", prev, context.score);
-			}
-			ImGui::SameLine();
-			if (UI::transparentButton(context.score.audioTrack.muted ? ICON_FA_VOLUME_MUTE : ICON_FA_VOLUME_UP,
-			                          ImVec2(UI::btnSmall.x, layersButtonHeight), false))
-			{
-				Score prev = context.score;
-				context.score.audioTrack.muted = !context.score.audioTrack.muted;
-				context.pushHistory("Toggle Audio Layer Mute", prev, context.score);
-				Result refreshResult = AudioTrackUtils::refreshPlaybackAudio(context);
-				if (!refreshResult.isOk())
-					IO::messageBox(APP_NAME, refreshResult.getMessage(), IO::MessageBoxButtons::Ok,
-					               IO::MessageBoxIcon::Warning);
-			}
 
 			ImGui::PopStyleColor();
 
@@ -2712,6 +3224,7 @@ namespace MikuMikuWorld
 		static bool focusRenameInput = false;
 		static int selectedWaypointIndex = -1;
 		static bool descendingOrder = true;
+		static int gotoMeasure = 0;
 
 		auto getContrastColor = [](const ImVec4& bg) -> ImVec4 {
 			float luminance = bg.x * 0.299f + bg.y * 0.587f + bg.z * 0.114f;
@@ -2748,12 +3261,32 @@ namespace MikuMikuWorld
 
 			ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(4, 4));
 
-			std::string sortDirectionLabel = std::string(descendingOrder ? ICON_FA_SORT_AMOUNT_DOWN : ICON_FA_SORT_AMOUNT_UP) + " " + getString(descendingOrder ? "sort_descending" : "sort_ascending");
-			if (ImGui::Button(sortDirectionLabel.c_str(), ImVec2(0.0f, 0.0f)))
-				descendingOrder = !descendingOrder;
+			ImGui::SetNextItemWidth(58.0f);
+			bool gotoActivated = false;
+			ImGui::InputInt("##waypoint_goto_measure", &gotoMeasure, 0, 0,
+			                ImGuiInputTextFlags_AutoSelectAll);
+			gotoActivated |= ImGui::IsItemFocused() && ImGui::IsKeyPressed(ImGuiKey_Enter, false);
 
-			float rightWpWidth = (waypointButtonHeight * 2.0f) + (4.0f * 1.0f);
-			ImGui::SameLine(ImGui::GetWindowContentRegionMax().x - rightWpWidth);
+			ImGui::SameLine();
+			gotoActivated |= UI::transparentButton(ICON_FA_ARROW_RIGHT,
+			                                       ImVec2(waypointButtonHeight, waypointButtonHeight),
+			                                       false);
+			if (gotoActivated)
+			{
+				gotoMeasure = std::max(gotoMeasure, 0);
+				scrollTimeline(
+				    context, measureToTicks(gotoMeasure, TICKS_PER_BEAT, context.score.timeSignatures));
+			}
+
+			std::string sortDirectionLabel =
+			    std::string(descendingOrder ? ICON_FA_SORT_AMOUNT_DOWN : ICON_FA_SORT_AMOUNT_UP) +
+			    " " + getString(descendingOrder ? "sort_descending" : "sort_ascending");
+			const float sortButtonWidth = ImGui::CalcTextSize(sortDirectionLabel.c_str()).x +
+			                              ImGui::GetStyle().FramePadding.x * 2.0f;
+			const float rightWpWidth = (waypointButtonHeight * 2.0f) + sortButtonWidth +
+			                           (ImGui::GetStyle().ItemSpacing.x * 2.0f);
+			ImGui::SameLine(std::max(ImGui::GetCursorPosX() + ImGui::GetStyle().ItemSpacing.x,
+			                         ImGui::GetWindowContentRegionMax().x - rightWpWidth));
 
 			if (UI::transparentButton(ICON_FA_PLUS, ImVec2(waypointButtonHeight, waypointButtonHeight), false))
 			{
@@ -2790,6 +3323,10 @@ namespace MikuMikuWorld
 				}
 			}
 			if (!canDelete) ImGui::EndDisabled();
+
+			ImGui::SameLine();
+			if (ImGui::Button(sortDirectionLabel.c_str(), ImVec2(sortButtonWidth, 0.0f)))
+				descendingOrder = !descendingOrder;
 
 			ImGui::PopStyleVar();
 			ImGui::Separator();
