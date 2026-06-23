@@ -223,13 +223,18 @@
     <ClCompile Include="ResourceManager.cpp" />
     <ClCompile Include="Score.cpp" />
     <ClCompile Include="ScoreContext.cpp" />
+    <ClCompile Include="ScoreContextHistory.cpp" />
+    <ClCompile Include="ScoreContextMetaEvents.cpp" />
     <ClCompile Include="ScoreEditorDebugWindow.cpp" />
     <ClCompile Include="ScoreEditorDialogs.cpp" />
     <ClCompile Include="ScoreNotePropertiesWindow.cpp" />
     <ClCompile Include="ScoreEditorTimeline.cpp" />
+    <ClCompile Include="ScoreEditorTimelineGeometry.cpp" />
+    <ClCompile Include="ScoreEditorTimelineMetaEvents.cpp" />
     <ClCompile Include="ScoreEditorWindows.cpp" />
     <ClCompile Include="ScorePropertiesWindow.cpp" />
     <ClCompile Include="ScorePreview.cpp" />
+    <ClCompile Include="ScoreMetaEventUtils.cpp" />
     <ClCompile Include="ScoreSerializer.cpp" />
     <ClCompile Include="ScoreSerializeWindow.cpp" />
     <ClCompile Include="ScoreStats.cpp" />
@@ -284,6 +289,7 @@
     <ClInclude Include="MinMax.h" />
     <ClInclude Include="Particle.h" />
     <ClInclude Include="EffectView.h" />
+    <ClInclude Include="NativeScoreFormat.h" />
     <ClInclude Include="NativeScoreSerializer.h" />
     <ClInclude Include="Note.h" />
     <ClInclude Include="NoteTypes.h" />
@@ -306,6 +312,7 @@
     <ClInclude Include="ScoreContext.h" />
     <ClInclude Include="ScoreEditorTimeline.h" />
     <ClInclude Include="ScoreEditorWindows.h" />
+    <ClInclude Include="ScoreMetaEventUtils.h" />
     <ClInclude Include="ScorePreview.h" />
     <ClInclude Include="ScoreSerializer.h" />
     <ClInclude Include="ScoreSerializeWindow.h" />

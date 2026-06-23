@@ -147,10 +147,25 @@
     <ClCompile Include="ScoreEditorTimeline.cpp">
       <Filter>ScoreEditor</Filter>
     </ClCompile>
+    <ClCompile Include="ScoreEditorTimelineGeometry.cpp">
+      <Filter>ScoreEditor</Filter>
+    </ClCompile>
+    <ClCompile Include="ScoreEditorTimelineMetaEvents.cpp">
+      <Filter>ScoreEditor</Filter>
+    </ClCompile>
     <ClCompile Include="TimelineEventControls.cpp">
       <Filter>ScoreEditor</Filter>
     </ClCompile>
     <ClCompile Include="ScoreContext.cpp">
+      <Filter>ScoreEditor</Filter>
+    </ClCompile>
+    <ClCompile Include="ScoreContextHistory.cpp">
+      <Filter>ScoreEditor</Filter>
+    </ClCompile>
+    <ClCompile Include="ScoreContextMetaEvents.cpp">
+      <Filter>ScoreEditor</Filter>
+    </ClCompile>
+    <ClCompile Include="ScoreMetaEventUtils.cpp">
       <Filter>ScoreEditor</Filter>
     </ClCompile>
     <ClCompile Include="HistoryManager.cpp">
@@ -350,6 +365,9 @@
     <ClInclude Include="ScoreEditorWindows.h">
       <Filter>ScoreEditor</Filter>
     </ClInclude>
+    <ClInclude Include="ScoreMetaEventUtils.h">
+      <Filter>ScoreEditor</Filter>
+    </ClInclude>
     <ClInclude Include="ScoreContext.h">
       <Filter>ScoreEditor</Filter>
     </ClInclude>
@@ -394,6 +412,9 @@
       <Filter>Score\Serialization</Filter>
     </ClInclude>
     <ClInclude Include="NativeScoreSerializer.h">
+      <Filter>Score\Serialization</Filter>
+    </ClInclude>
+    <ClInclude Include="NativeScoreFormat.h">
       <Filter>Score\Serialization</Filter>
     </ClInclude>
     <ClInclude Include="SusSerializer.h">

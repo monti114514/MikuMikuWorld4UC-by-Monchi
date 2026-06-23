@@ -1,6 +1,7 @@
 #include "ScoreContext.h"
 #include "Constants.h"
 #include "IO.h"
+#include "ScoreMetaEventUtils.h"
 #include "UI.h"
 #include "Utilities.h"
 #include "Math.h"
@@ -17,113 +18,6 @@ using namespace IO;
 	namespace MikuMikuWorld
 	{
 	constexpr const char* clipboardSignature = "MikuMikuWorld clipboard\n";
-
-	namespace
-	{
-		const Tempo* findTempoByRuntimeId(const Score& score, id_t runtimeId)
-		{
-			auto it = std::find_if(score.tempoChanges.begin(), score.tempoChanges.end(),
-			                       [runtimeId](const Tempo& tempo)
-			                       { return tempo.runtimeId == runtimeId; });
-			return it == score.tempoChanges.end() ? nullptr : &(*it);
-		}
-
-		Tempo* findTempoByRuntimeId(Score& score, id_t runtimeId)
-		{
-			auto it = std::find_if(score.tempoChanges.begin(), score.tempoChanges.end(),
-			                       [runtimeId](const Tempo& tempo)
-			                       { return tempo.runtimeId == runtimeId; });
-			return it == score.tempoChanges.end() ? nullptr : &(*it);
-		}
-
-		const Waypoint* findWaypointByRuntimeId(const Score& score, id_t runtimeId)
-		{
-			auto it = std::find_if(score.waypoints.begin(), score.waypoints.end(),
-			                       [runtimeId](const Waypoint& waypoint)
-			                       { return waypoint.runtimeId == runtimeId; });
-			return it == score.waypoints.end() ? nullptr : &(*it);
-		}
-
-		Waypoint* findWaypointByRuntimeId(Score& score, id_t runtimeId)
-		{
-			auto it = std::find_if(score.waypoints.begin(), score.waypoints.end(),
-			                       [runtimeId](const Waypoint& waypoint)
-			                       { return waypoint.runtimeId == runtimeId; });
-			return it == score.waypoints.end() ? nullptr : &(*it);
-		}
-
-		int getFeverEndpointTick(const Fever& fever, MetaEventKind kind)
-		{
-			return kind == MetaEventKind::FeverStart ? fever.startTick : fever.endTick;
-		}
-
-		bool isFeverEndpoint(MetaEventKind kind)
-		{
-			return kind == MetaEventKind::FeverStart || kind == MetaEventKind::FeverEnd;
-		}
-	}
-
-	bool ScoreContext::isMetaEventSelected(const SelectedMetaEvent& event) const
-	{
-		return selectedMetaEvents.find(event) != selectedMetaEvents.end();
-	}
-
-	void ScoreContext::selectMetaEvent(const SelectedMetaEvent& event, bool additive)
-	{
-		if (!additive)
-			clearSelection();
-		selectedMetaEvents.insert(event);
-	}
-
-	void ScoreContext::toggleMetaEventSelection(const SelectedMetaEvent& event)
-	{
-		auto it = selectedMetaEvents.find(event);
-		if (it == selectedMetaEvents.end())
-			selectedMetaEvents.insert(event);
-		else
-			selectedMetaEvents.erase(it);
-	}
-
-	void ScoreContext::assignMissingMetaEventRuntimeIds()
-	{
-		for (Tempo& tempo : score.tempoChanges)
-		{
-			if (tempo.runtimeId == static_cast<id_t>(-1))
-				tempo.runtimeId = getNextTempoRuntimeID();
-		}
-		for (Waypoint& waypoint : score.waypoints)
-		{
-			if (waypoint.runtimeId == static_cast<id_t>(-1))
-				waypoint.runtimeId = getNextWaypointRuntimeID();
-		}
-	}
-
-	int ScoreContext::getMetaEventTick(const SelectedMetaEvent& event) const
-	{
-		switch (event.kind)
-		{
-		case MetaEventKind::Waypoint:
-			if (const Waypoint* waypoint = findWaypointByRuntimeId(score, event.key))
-				return waypoint->tick;
-			break;
-		case MetaEventKind::Bpm:
-			if (const Tempo* tempo = findTempoByRuntimeId(score, event.key))
-				return tempo->tick;
-			break;
-		case MetaEventKind::TimeSignature:
-			if (score.timeSignatures.find((int)event.key) != score.timeSignatures.end())
-				return measureToTicks((int)event.key, TICKS_PER_BEAT, score.timeSignatures);
-			break;
-		case MetaEventKind::Skill:
-			if (score.skills.find(event.key) != score.skills.end())
-				return score.skills.at(event.key).tick;
-			break;
-		case MetaEventKind::FeverStart:
-		case MetaEventKind::FeverEnd:
-			return getFeverEndpointTick(score.fever, event.kind);
-		}
-		return -1;
-	}
 
 	void ScoreContext::setStep(HoldStepType type)
 	{
@@ -667,7 +561,8 @@ using namespace IO;
 			switch (event.kind)
 			{
 			case MetaEventKind::Waypoint:
-				if (const Waypoint* waypoint = findWaypointByRuntimeId(score, event.key))
+				if (const Waypoint* waypoint =
+				        ScoreMetaEvents::findWaypointByRuntimeId(score, event.key))
 				{
 					json waypointData;
 					waypointData["name"] = waypoint->name;
@@ -676,7 +571,8 @@ using namespace IO;
 				}
 				break;
 			case MetaEventKind::Bpm:
-				if (const Tempo* tempo = findTempoByRuntimeId(score, event.key))
+				if (const Tempo* tempo =
+				        ScoreMetaEvents::findTempoByRuntimeId(score, event.key))
 				{
 					json tempoData;
 					tempoData["tick"] = tempo->tick - minTick;
@@ -1760,45 +1656,7 @@ using namespace IO;
 		pushHistory("Lerp hispeeds", prev, score);
 	}
 
-	void ScoreContext::undo()
-	{
-		if (history.hasUndo())
-		{
-			score = history.undo();
-			assignMissingMetaEventRuntimeIds();
-			clearSelection();
-
-			UI::setWindowTitle((workingData.filename.size()
-			                        ? File::getFilename(workingData.filename)
-			                        : windowUntitled) +
-			                   "*");
-			upToDate = false;
-
-			scoreStats.calculateStats(score);
-			scorePreviewDrawData.calculateDrawData(score); // <--- これを追加
-		}
-	}
-
-	void ScoreContext::redo()
-	{
-		if (history.hasRedo())
-		{
-			score = history.redo();
-			assignMissingMetaEventRuntimeIds();
-			clearSelection();
-
-			UI::setWindowTitle((workingData.filename.size()
-			                        ? File::getFilename(workingData.filename)
-			                        : windowUntitled) +
-			                   "*");
-			upToDate = false;
-
-			scoreStats.calculateStats(score);
-			scorePreviewDrawData.calculateDrawData(score); // <--- これを追加
-		}
-	}
-
-void ScoreContext::convertHoldToGuide(GuideColor color)
+	void ScoreContext::convertHoldToGuide(GuideColor color)
 	{
 		if (selectedNotes.empty())
 			return;
@@ -1861,91 +1719,5 @@ void ScoreContext::convertHoldToGuide(GuideColor color)
 			pushHistory("Convert guide to hold", prev, score);
 	}
 
-	void ScoreContext::pushHistory(std::string description, const Score& prev, const Score& curr)
-	{
-		history.pushHistory(description, prev, curr);
 
-		UI::setWindowTitle((workingData.filename.size() ? File::getFilename(workingData.filename)
-		                                                : windowUntitled) +
-		                   "*");
-		scoreStats.calculateStats(score);
-		scorePreviewDrawData.calculateDrawData(score); // <--- これを追加
-
-		upToDate = false;
-	}
-
-	bool ScoreContext::selectionHasEase() const
-	{
-		return std::any_of(selectedNotes.begin(), selectedNotes.end(),
-		                   [this](const int id) { return score.notes.at(id).hasEase(); });
-	}
-
-	bool ScoreContext::selectionHasHold() const
-	{
-		return std::any_of(selectedNotes.begin(), selectedNotes.end(),
-						   [this](int id) { return score.notes.at(id).getType() == NoteType::Hold; });
-	}
-
-	bool ScoreContext::selectionHasStep() const
-	{
-		return std::any_of(selectedNotes.begin(), selectedNotes.end(), [this](const int id)
-		                   { return score.notes.at(id).getType() == NoteType::HoldMid; });
-	}
-
-	bool ScoreContext::selectionHasFlickable() const
-	{
-		return std::any_of(selectedNotes.begin(), selectedNotes.end(),
-		                   [this](const int id) { return score.notes.at(id).canFlick(); });
-	}
-
-	bool ScoreContext::selectionCanConnect() const
-	{
-		if (selectedNotes.size() != 2)
-			return false;
-
-		const auto& note1 = score.notes.at(*selectedNotes.begin());
-		const auto& note2 = score.notes.at(*std::next(selectedNotes.begin()));
-		if (note1.tick == note2.tick)
-			return (note1.getType() == NoteType::Hold && note2.getType() == NoteType::HoldEnd) ||
-			       (note1.getType() == NoteType::HoldEnd && note2.getType() == NoteType::Hold);
-
-		auto noteTickCompareFunc = [](const Note& n1, const Note& n2) { return n1.tick < n2.tick; };
-		Note earlierNote = std::min(note1, note2, noteTickCompareFunc);
-		Note laterNote = std::max(note1, note2, noteTickCompareFunc);
-
-		return (earlierNote.getType() == NoteType::HoldEnd &&
-		        laterNote.getType() == NoteType::Hold);
-	}
-
-	bool ScoreContext::selectionCanChangeHoldType() const
-	{
-		return std::any_of(
-		    selectedNotes.begin(), selectedNotes.end(),
-		    [this](const int id)
-		    {
-			    const Note& note = score.notes.at(id);
-			    if (note.getType() == NoteType::Hold || note.getType() == NoteType::HoldEnd)
-				    return !score.holdNotes
-				                .at(note.getType() == NoteType::Hold ? note.ID : note.parentID)
-				                .isGuide();
-
-			    return false;
-		    });
-	}
-
-	bool ScoreContext::selectionCanChangeFadeType() const
-	{
-		return std::any_of(
-		    selectedNotes.begin(), selectedNotes.end(),
-		    [this](const int id)
-		    {
-			    const Note& note = score.notes.at(id);
-			    if (note.getType() == NoteType::Hold || note.getType() == NoteType::HoldEnd)
-				    return score.holdNotes
-				        .at(note.getType() == NoteType::Hold ? note.ID : note.parentID)
-				        .isGuide();
-
-			    return false;
-		    });
-	}
 }
