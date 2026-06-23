@@ -147,6 +147,9 @@
     <ClCompile Include="ScoreEditorTimeline.cpp">
       <Filter>ScoreEditor</Filter>
     </ClCompile>
+    <ClCompile Include="TimelineEventControls.cpp">
+      <Filter>ScoreEditor</Filter>
+    </ClCompile>
     <ClCompile Include="ScoreContext.cpp">
       <Filter>ScoreEditor</Filter>
     </ClCompile>
@@ -351,6 +354,9 @@
       <Filter>ScoreEditor</Filter>
     </ClInclude>
     <ClInclude Include="ScoreEditorTimeline.h">
+      <Filter>ScoreEditor</Filter>
+    </ClInclude>
+    <ClInclude Include="TimelineEventControls.h">
       <Filter>ScoreEditor</Filter>
     </ClInclude>
     <ClInclude Include="HistoryManager.h">

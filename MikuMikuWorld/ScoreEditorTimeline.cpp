@@ -7,6 +7,7 @@
 #include "Tempo.h"
 #include "Score.h"
 #include "AudioTrackUtils.h"
+#include "TimelineEventControls.h"
 #include "IO.h"
 #include "UI.h"
 #include "Utilities.h"
@@ -97,65 +98,6 @@ namespace MikuMikuWorld
 	{
 		if (timelineInstance != nullptr)
 			timelineInstance->scrollTimeline(context, tick);
-	}
-
-	bool eventControl(float xPos, Vector2 pos, ImU32 color, const char* txt, bool enabled,
-	                  bool selected = false, ImRect* outRect = nullptr)
-	{
-		ImDrawList* drawList = ImGui::GetWindowDrawList();
-		if (!drawList)
-			return false;
-
-		pos.x = floorf(pos.x);
-		pos.y = floorf(pos.y);
-
-		ImGui::PushID(pos.y);
-		ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, { 1, 0 });
-		bool activated = UI::coloredButton(
-		    txt, { pos.x, pos.y - ImGui::GetFrameHeightWithSpacing() }, { -1, -1 }, color, enabled);
-		ImGui::PopStyleVar();
-		ImGui::PopID();
-		ImRect rect(ImGui::GetItemRectMin(), ImGui::GetItemRectMax());
-		if (outRect != nullptr)
-			*outRect = rect;
-		drawList->AddLine({ xPos, pos.y }, { pos.x + ImGui::GetItemRectSize().x, pos.y }, color,
-		                  primaryLineThickness);
-		if (selected)
-			drawList->AddRect(rect.Min, rect.Max, 0xffffffff, 2.0f, ImDrawFlags_RoundCornersAll,
-			                  1.5f);
-
-		return activated;
-	}
-
-	bool metaClusterControl(const char* id, float lineStartX, Vector2 pos, float width, ImU32 color,
-	                        const char* txt, bool enabled, bool selected = false,
-	                        ImRect* outRect = nullptr)
-	{
-		ImDrawList* drawList = ImGui::GetWindowDrawList();
-		if (!drawList)
-			return false;
-
-		pos.x = floorf(pos.x);
-		pos.y = floorf(pos.y);
-
-		ImGui::PushID(id);
-		ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, { 1, 0 });
-		const float buttonWidth = std::max(1.0f, width - ImGui::GetStyle().FramePadding.x);
-		bool activated = UI::coloredButton(
-		    txt, { pos.x, pos.y - ImGui::GetFrameHeightWithSpacing() }, { buttonWidth, -1 },
-		    color, enabled);
-		ImGui::PopStyleVar();
-		ImGui::PopID();
-		ImRect rect(ImGui::GetItemRectMin(), ImGui::GetItemRectMax());
-		if (outRect != nullptr)
-			*outRect = rect;
-		drawList->AddLine({ lineStartX, pos.y }, { pos.x + ImGui::GetItemRectSize().x, pos.y },
-		                  color, primaryLineThickness);
-		if (selected)
-			drawList->AddRect(rect.Min, rect.Max, 0xffffffff, 2.0f, ImDrawFlags_RoundCornersAll,
-			                  1.5f);
-
-		return activated;
 	}
 
 	float ScoreEditorTimeline::getNoteYPosFromTick(int tick) const
@@ -672,9 +614,10 @@ namespace MikuMikuWorld
 				const ClusterItem& item = cluster.items[i];
 				const bool enabled = item.type == ClusterItemType::Waypoint || !playing;
 				ImRect itemRect;
-				metaClusterControl(item.id.c_str(), timelineStartX, { x, item.y },
-				                   widths[i], item.color, item.text.c_str(), enabled,
-				                   context.isMetaEventSelected(item.selectionKey), &itemRect);
+				TimelineEventControls::metaClusterControl(
+				    item.id.c_str(), timelineStartX, { x, item.y }, widths[i], item.color,
+				    item.text.c_str(), enabled, context.isMetaEventSelected(item.selectionKey),
+				    &itemRect);
 				metaEventRects[item.selectionKey] = itemRect;
 				if (ImGui::IsItemHovered())
 					isHoveringNote = true;
@@ -3300,8 +3243,9 @@ namespace MikuMikuWorld
 		// タイムラインの左端（StartX）から左へ110pxの位置に配置
 		Vector2 pos{ getTimelineStartX(context) - (110.0f * dpiScale),
 			         position.y - tickToPosition(tick) + visualOffset };
-		return eventControl(getTimelineStartX(context), pos, tempoColor,
-		                    IO::formatString("%g BPM", bpm).c_str(), enabled);
+		return TimelineEventControls::eventControl(
+		    getTimelineStartX(context), pos, tempoColor,
+		    IO::formatString("%g BPM", bpm).c_str(), enabled);
 	}
 
 	bool ScoreEditorTimeline::timeSignatureControl(const ScoreContext& context, int numerator, int denominator, int tick, bool enabled)
@@ -3310,8 +3254,9 @@ namespace MikuMikuWorld
 		// タイムラインの左端（StartX）から左へ45pxの位置に配置
 		Vector2 pos{ getTimelineStartX(context) - (45.0f * dpiScale),
 			         position.y - tickToPosition(tick) + visualOffset };
-		return eventControl(getTimelineStartX(context), pos, timeColor,
-		                    IO::formatString("%d/%d", numerator, denominator).c_str(), enabled);
+		return TimelineEventControls::eventControl(
+		    getTimelineStartX(context), pos, timeColor,
+		    IO::formatString("%d/%d", numerator, denominator).c_str(), enabled);
 	}
 
 	bool ScoreEditorTimeline::skillControl(const ScoreContext& context, const SkillTrigger& skill)
@@ -3325,9 +3270,9 @@ namespace MikuMikuWorld
 		float dpiScale = ImGui::GetMainViewport()->DpiScale;
 		Vector2 pos{ getTimelineStartX(context) - (85 * dpiScale),
 			         position.y - tickToPosition(tick) + visualOffset };
-		return eventControl(getTimelineStartX(context), pos, skillBadgeColor(effect),
-		                    IO::formatString("%s Lv.%d", skillBadgeIcon(effect), level).c_str(),
-		                    enabled);
+		return TimelineEventControls::eventControl(
+		    getTimelineStartX(context), pos, skillBadgeColor(effect),
+		    IO::formatString("%s Lv.%d", skillBadgeIcon(effect), level).c_str(), enabled);
 	}
 
 	bool ScoreEditorTimeline::skillControl(const ScoreContext& context, int tick, bool enabled)
@@ -3376,8 +3321,9 @@ namespace MikuMikuWorld
 			         position.y - tickToPosition(tick) + visualOffset };
 		SelectedMetaEvent event{ start ? MetaEventKind::FeverStart : MetaEventKind::FeverEnd, 0 };
 		ImRect itemRect;
-		eventControl(getTimelineEndX(context), pos, feverColor, txt.c_str(), enabled,
-		             context.isMetaEventSelected(event), &itemRect);
+		TimelineEventControls::eventControl(getTimelineEndX(context), pos, feverColor,
+		                                    txt.c_str(), enabled,
+		                                    context.isMetaEventSelected(event), &itemRect);
 		metaEventRects[event] = itemRect;
 		if (ImGui::IsItemHovered())
 			isHoveringNote = true;
@@ -3444,7 +3390,7 @@ namespace MikuMikuWorld
 		auto color = hideNotes ? (enabled ? hideSpeedColor : inactiveHideSpeedColor)
 		                       : (enabled ? speedColor : inactiveSpeedColor);
 
-		return eventControl(
+		return TimelineEventControls::eventControl(
 		    hiSpeedStartX, pos,
 		    selected ? ImGui::ColorConvertFloat4ToU32(generateHighlightColor(
 		                   generateHighlightColor(ImGui::ColorConvertU32ToFloat4(color))))
@@ -3465,7 +3411,8 @@ namespace MikuMikuWorld
 		float dpiScale = ImGui::GetMainViewport()->DpiScale;
 		Vector2 pos{ getTimelineStartX(context) - (176 * dpiScale),
 			         position.y - tickToPosition(tick) + visualOffset };
-		return eventControl(getTimelineStartX(context), pos, waypointColor, name.c_str(), true);
+		return TimelineEventControls::eventControl(getTimelineStartX(context), pos, waypointColor,
+		                                           name.c_str(), true);
 	}
 
 	void ScoreEditorTimeline::eventEditor(ScoreContext& context)
