@@ -205,12 +205,14 @@
     <ClCompile Include="MinMax.cpp" />
     <ClCompile Include="Particle.cpp" />
     <ClCompile Include="EffectView.cpp" />
+    <ClCompile Include="LayersWindow.cpp" />
     <ClCompile Include="NativeScoreSerializer.cpp" />
     <ClCompile Include="Note.cpp" />
     <ClCompile Include="OpenGlLoader.cpp" />
     <ClCompile Include="NotesPreset.cpp" />
     <ClCompile Include="PreviewData.cpp" />
     <ClCompile Include="PreviewEngine.cpp" />
+    <ClCompile Include="PresetsWindow.cpp" />
     <ClCompile Include="Rendering\Camera.cpp" />
     <ClCompile Include="Rendering\Framebuffer.cpp" />
     <ClCompile Include="Rendering\Renderer.cpp" />
@@ -221,8 +223,12 @@
     <ClCompile Include="ResourceManager.cpp" />
     <ClCompile Include="Score.cpp" />
     <ClCompile Include="ScoreContext.cpp" />
+    <ClCompile Include="ScoreEditorDebugWindow.cpp" />
+    <ClCompile Include="ScoreEditorDialogs.cpp" />
+    <ClCompile Include="ScoreNotePropertiesWindow.cpp" />
     <ClCompile Include="ScoreEditorTimeline.cpp" />
     <ClCompile Include="ScoreEditorWindows.cpp" />
+    <ClCompile Include="ScorePropertiesWindow.cpp" />
     <ClCompile Include="ScorePreview.cpp" />
     <ClCompile Include="ScoreSerializer.cpp" />
     <ClCompile Include="ScoreSerializeWindow.cpp" />
@@ -238,6 +244,7 @@
     <ClCompile Include="UI.cpp" />
     <ClCompile Include="UscSerializer.cpp" />
     <ClCompile Include="Utilities.cpp" />
+    <ClCompile Include="WaypointsWindow.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Application.h" />

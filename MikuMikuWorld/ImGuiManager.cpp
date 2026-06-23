@@ -24,7 +24,6 @@ namespace MikuMikuWorld
 
 		configFilename = Application::getAppDir() + IMGUI_CONFIG_FILENAME;
 
-		// --- 修正ここから：パスをワイド文字列に変換してから処理する ---
 		std::wstring wConfigFilename = IO::mbToWideStr(configFilename);
 
 		if (!std::filesystem::exists(wConfigFilename)) {
@@ -161,7 +160,6 @@ DockSpace           ID=0xF442860A Window=0xD8117908 Pos=0,58 Size=1920,974 Split
 				file.close();
 			}
 		}
-		// --- 修正ここまで ---
 
 		ImGuiIO& io = ImGui::GetIO();
 		io.ConfigFlags |= ImGuiConfigFlags_DockingEnable | ImGuiConfigFlags_ViewportsEnable |

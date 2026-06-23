@@ -123,6 +123,27 @@
     <ClCompile Include="ScoreEditorWindows.cpp">
       <Filter>ScoreEditor</Filter>
     </ClCompile>
+    <ClCompile Include="LayersWindow.cpp">
+      <Filter>ScoreEditor</Filter>
+    </ClCompile>
+    <ClCompile Include="PresetsWindow.cpp">
+      <Filter>ScoreEditor</Filter>
+    </ClCompile>
+    <ClCompile Include="ScoreEditorDebugWindow.cpp">
+      <Filter>ScoreEditor</Filter>
+    </ClCompile>
+    <ClCompile Include="ScoreEditorDialogs.cpp">
+      <Filter>ScoreEditor</Filter>
+    </ClCompile>
+    <ClCompile Include="ScoreNotePropertiesWindow.cpp">
+      <Filter>ScoreEditor</Filter>
+    </ClCompile>
+    <ClCompile Include="ScorePropertiesWindow.cpp">
+      <Filter>ScoreEditor</Filter>
+    </ClCompile>
+    <ClCompile Include="WaypointsWindow.cpp">
+      <Filter>ScoreEditor</Filter>
+    </ClCompile>
     <ClCompile Include="ScoreEditorTimeline.cpp">
       <Filter>ScoreEditor</Filter>
     </ClCompile>
