@@ -8,7 +8,7 @@
 #include "Score.h"
 #include "ScoreStats.h"
 #include "TimelineMode.h"
-#include "PreviewData.h" // <--- これを追加
+#include "PreviewData.h"
 #include <cstdint>
 #include <set>
 #include <unordered_set>
@@ -128,7 +128,7 @@ namespace MikuMikuWorld
 		HistoryManager history;
 		Audio::AudioManager audio;
 		PasteData pasteData{};
-		Engine::DrawData scorePreviewDrawData; // <--- これを追加
+		Engine::DrawData scorePreviewDrawData;
 		
 		std::unordered_set<id_t> selectedNotes;
 		std::unordered_set<id_t> selectedHiSpeedChanges;

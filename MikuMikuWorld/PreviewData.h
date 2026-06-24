@@ -22,7 +22,6 @@ namespace MikuMikuWorld::Engine
 		int layer;
 	};
 
-	// 縲蝉ｿｮ豁｣迚医大ｮ滓ｩ滉ｻ墓ｧ倥↓蜷医ｏ縺帙◆蜷梧凾謚ｼ縺礼ｷ壹・繝・・繧ｿ讒矩
 	struct DrawingLine
 	{
 		int leftTick;
@@ -48,9 +47,9 @@ namespace MikuMikuWorld::Engine
 		int endID;
 		EaseType ease;
 		bool isGuide;
-		GuideColor color; // 霑ｽ蜉: 繧ｬ繧､繝臥ｷ壹・濶ｲ
-		bool dummy;       // 霑ｽ蜉
-		int layer;        // 霑ｽ蜉
+		GuideColor color;
+		bool dummy;
+		int layer;
 		HoldStepLayer stepLayer{ HoldStepLayer::Top };
 
 		ptrdiff_t tailStepIndex;

@@ -3,7 +3,7 @@
 #include <memory>
 #include "Math.h"
 #include "Score.h"
-#include "PreviewData.h" // Range構造体を使うために追加
+#include "PreviewData.h"
 #include "Rendering/Texture.h"
 #include "Rendering/Sprite.h"
 #include "DirectXMath.h"
@@ -65,7 +65,6 @@ namespace MikuMikuWorld::Engine
 	std::array<DirectX::XMFLOAT4, 4> perspectiveQuadvPos(float leftStart, float leftStop, float rightStart, float rightStop, float top, float bottom);
 	std::array<DirectX::XMFLOAT4, 4> quadUV(const Sprite& sprite, const Texture& texture);
 
-	// 【追加】MMW4UC向けに、プレビュー用の時間計算関数をここに定義します
 	double accumulateScaledDuration(int tick, int beatTicks, const std::vector<Tempo>& tempos,
 	                                const std::unordered_map<id_t, HiSpeedChange>& hiSpeeds,
 	                                int layer = 0);

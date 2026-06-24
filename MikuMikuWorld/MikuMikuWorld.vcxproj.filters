@@ -147,10 +147,16 @@
     <ClCompile Include="ScoreEditorTimeline.cpp">
       <Filter>ScoreEditor</Filter>
     </ClCompile>
+    <ClCompile Include="ScoreEditorTimelineAudio.cpp">
+      <Filter>ScoreEditor</Filter>
+    </ClCompile>
     <ClCompile Include="ScoreEditorTimelineGeometry.cpp">
       <Filter>ScoreEditor</Filter>
     </ClCompile>
     <ClCompile Include="ScoreEditorTimelineMetaEvents.cpp">
+      <Filter>ScoreEditor</Filter>
+    </ClCompile>
+    <ClCompile Include="ScoreEditorTimelinePlayback.cpp">
       <Filter>ScoreEditor</Filter>
     </ClCompile>
     <ClCompile Include="TimelineEventControls.cpp">

@@ -127,7 +127,6 @@ namespace MikuMikuWorld
 		bool debugEnabled;
 		std::vector<std::string> pinnedQuickSettings;
 
-		// 【追加】プレビュー用設定変数
 		float pvNoteSpeed{ 10.0f };
 		float pvStageOpacity{ 1.0f };
 		float pvStageCover{ 0.0f };

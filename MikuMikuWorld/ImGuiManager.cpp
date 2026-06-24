@@ -343,7 +343,11 @@ DockSpace             ID=0xF442860A Window=0xD8117908 Pos=0,78 Size=1920,954 Spl
 		fontConfig.GlyphMinAdvanceX = 13.0f;
 		fontConfig.PixelSnapH = false;
 		fontConfig.OversampleH = 1;
-		static const ImWchar iconRanges[] = { start, end, 0 };
+		const ImWchar iconRanges[] = {
+			static_cast<ImWchar>(start),
+			static_cast<ImWchar>(end),
+			0
+		};
 		ImGui::GetIO().Fonts->AddFontFromFileTTF(filename.c_str(), (int)size, &fontConfig,
 		                                         iconRanges);
 	}

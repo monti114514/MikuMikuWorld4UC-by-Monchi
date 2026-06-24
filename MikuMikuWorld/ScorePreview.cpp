@@ -630,9 +630,9 @@ namespace MikuMikuWorld
 
 		for (auto& note : drawData.drawingNotes)
 		{
-		// 修正：at() を find() に変えて、データが存在するかチェックする
+
 		auto it = context.score.notes.find(note.refID);
-		if (it == context.score.notes.end()) continue; // 見つからない場合は描画をスキップ
+		if (it == context.score.notes.end()) continue;
 
 		const Note& noteData = it->second;
 
@@ -670,14 +670,13 @@ namespace MikuMikuWorld
 	if (!isArrayIndexInBounds(sprIndex, texture.sprites)) return;
 	const Sprite& sprite = texture.sprites[sprIndex];
 
-	// ★ 純正通り SimultaneousLine を使用
 	size_t transIndex = static_cast<size_t>(SpriteType::SimultaneousLine);
 	if (!isArrayIndexInBounds(transIndex, ResourceManager::spriteTransforms)) return;
 	const SpriteTransform& lineTransform = ResourceManager::spriteTransforms[transIndex];
 	
 	float texW = (float)texture.getWidth();
 	float texH = (float)texture.getHeight();
-	// ★ 純正と完全に同じ計算式 (1 + h と 1 - h) に戻して裏返りを修正
+
 	const float noteTop = 1.0f + Engine::getNoteHeight();
 	const float noteBottom = 1.0f - Engine::getNoteHeight();
 
@@ -732,7 +731,6 @@ namespace MikuMikuWorld
 			std::swap(adj_left_travel, adj_right_travel);
 		}
 
-		// laneToLeft の二重変換を排し、構築済みの物理座標をそのまま使用
 		float noteLeft = adj_left_lane;
 		float noteRight = adj_right_lane;
 
@@ -744,11 +742,9 @@ namespace MikuMikuWorld
 			std::swap(adj_left_travel, adj_right_travel);
 		}
 
-		// ★ 純正の `auto vPos = lineTransform.apply(Engine::perspectiveQuadvPos(...));` を完全再現
 		auto rawPos = Engine::perspectiveQuadvPos(noteLeft, noteRight, noteTop, noteBottom);
 		auto vPos = lineTransform.apply(rawPos);
 
-		// ★ 純正の `DirectX::XMMatrixScaling(y, y, 1.f)` を、左右独立して適用
 		vPos[0].x *= adj_right_travel; vPos[0].y *= adj_right_travel;
 		vPos[1].x *= adj_right_travel; vPos[1].y *= adj_right_travel;
 		
@@ -762,7 +758,7 @@ namespace MikuMikuWorld
 			(sprite.getY() + sprite.getHeight()) / texH
 		);
 		
-		// ★ 純正の Z-Index と Tint を完全再現
+
 		float center_y = (adj_left_travel + adj_right_travel) / 2.0f;
 		int zIndex = Engine::getZIndex(SpriteLayer::UNDER_NOTE_EFFECT, 0, center_y);
 
@@ -788,7 +784,7 @@ namespace MikuMikuWorld
 
 	for (auto& tick : context.scorePreviewDrawData.drawingHoldTicks)
 	{
-		// 存在チェックを行い、データが既に消えていたら描画を安全にスキップする
+
 		auto it = context.score.notes.find(tick.refID);
 		if (it == context.score.notes.end())
 			continue;
@@ -808,7 +804,7 @@ namespace MikuMikuWorld
 
 		float y = (float)Engine::approach(tick.visualTime.min, tick.visualTime.max, scaled_tm);
 			
-			//  Y座標クリッピング
+
 			if (y < -0.1 || y > 1.2) continue;
 
 			int sprIndex = getNoteSpriteIndex(noteData);
@@ -833,7 +829,7 @@ namespace MikuMikuWorld
 	
 		for (auto& segment : drawData.drawingHoldSegments)
 		{
-			// 存在チェックを行い、データが既に消えていたら描画を安全にスキップする
+
 			auto endIt = context.score.notes.find(segment.endID);
 			if (endIt == context.score.notes.end())
 				continue;
@@ -859,14 +855,13 @@ namespace MikuMikuWorld
 				continue;
 	
 			// =======================================================================================
-			// ★ 完全修正版：STM補間（曲線の維持）と、正確なアンカー固定（途切れ防止）のハイブリッド
+
 			// =======================================================================================
 			
 			double start_stm = segment.headTime;
 			double start_time = segment.startTime;
 	
-			// ノーツが判定ラインを越えた（ホールド中）場合、始点を「現在のSTM」と「現在の時間」に強制固定する
-			// これにより、推測計算によるズレが消滅し、絶対に判定ライン（Y=1.0）から帯が途切れません。
+
 			if (current_tm > segment.startTime)
 			{
 				start_stm = current_stm;
@@ -876,7 +871,7 @@ namespace MikuMikuWorld
 			double stm_top = current_stm + 1.0 * noteDuration;
 			double stm_bottom = current_stm - 0.2 * noteDuration;
 	
-			// 画面に映る範囲のみを計算するカリング処理（元のコードの考え方と同じ）
+
 			double p_view_a = unlerpD(start_stm, segment.tailTime, stm_bottom);
 			double p_view_b = unlerpD(start_stm, segment.tailTime, stm_top);
 			double p_min = std::clamp(std::min(p_view_a, p_view_b), 0.0, 1.0);
@@ -913,7 +908,7 @@ namespace MikuMikuWorld
 			const auto ease = getEaseFunction(segment.ease);
 			float startLeft = segment.headLeft, startRight = segment.headRight, endLeft = segment.tailLeft, endRight = segment.tailRight;
 	
-			// 分割数の計算 (元のSTMを用いたロジックを維持)
+
 			double start_y = Engine::approach(start_stm - noteDuration, start_stm, current_stm);
 			double end_y   = Engine::approach(segment.tailTime - noteDuration, segment.tailTime, current_stm);
 	
@@ -924,7 +919,7 @@ namespace MikuMikuWorld
 				double perspective_factor = std::pow(std::max(0.1, mid_travel), 0.8);
 				double x_diff_max = std::max(std::abs(startLeft - endLeft), std::abs(startRight - endRight));
 				
-				// Xの移動量計算には時間割合(time_frac)を使う
+
 				double t_frac_start = unlerpD(segment.startTime, segment.endTime, start_time);
 				double t_frac_end   = 1.0; 
 				double x_diff = (x_diff_max * 2.5 / perspective_factor) * std::abs(t_frac_end - t_frac_start);
@@ -988,7 +983,7 @@ namespace MikuMikuWorld
 	
 			double from_percentage = 0;
 			
-			// ループ初期値の設定
+
 			double stepStart_stm = lerpD(start_stm, segment.tailTime, p_min);
 			double stepTop = Engine::approach(stepStart_stm - noteDuration, stepStart_stm, current_stm);
 	
@@ -1004,11 +999,11 @@ namespace MikuMikuWorld
 			{
 				double to_p = lerpD(p_min, p_max, (double)(i + 1) / steps);
 				
-				// Y座標用には「STM」を補間して使う（純正コードの美しい曲線を維持）
+
 				double stepEnd_stm = lerpD(start_stm, segment.tailTime, to_p);
 				double stepBottom = Engine::approach(stepEnd_stm - noteDuration, stepEnd_stm, current_stm);
 	
-				// X座標用には「時間割合」を補間して使う（レーンの移動が時間ベースで正確になる）
+
 				double stepEnd_time = lerpD(start_time, segment.endTime, to_p);
 				double stepEnd_timeFrac = unlerpD(segment.startTime, segment.endTime, stepEnd_time);
 	
@@ -1018,7 +1013,7 @@ namespace MikuMikuWorld
 				float   stepEndRight = ease(startRight, endRight, (float)stepEnd_timeFrac);
 	
 				// =======================================================================================
-				// マイナスHS対策：Y座標が逆転した場合、手前と奥の座標を丸ごとスワップしてねじれを防ぐ
+
 				// =======================================================================================
 				float q_leftStart = stepStartLeft;
 				float q_leftStop = stepEndLeft;
@@ -1098,7 +1093,7 @@ namespace MikuMikuWorld
 					renderer->pushQuad(vPos, uv, model, toFloat4(defaultTint, baseAlpha), (int)texture.getID(), zIndex);
 				}
 				
-				// ループ終端の更新処理
+
 				stepTop = stepBottom;
 				stepStart_timeFrac = stepEnd_timeFrac;
 			}
@@ -1138,7 +1133,7 @@ namespace MikuMikuWorld
 		std::array<DirectX::XMFLOAT4, 4> vPos, uv;
 
 		// ---------------------------------------------------------
-		// 中央パーツのぼやけ（エイリアシング）回避ロジック
+
 		// ---------------------------------------------------------
 		float middleLeft = noteLeft + 0.25f;
 		float middleRight = noteRight - 0.3f;
@@ -1147,11 +1142,9 @@ namespace MikuMikuWorld
 		float midUvLeft = sprite.getX() + NOTE_SIDE_WIDTH;
 		float midUvRight = sprite.getX() + sprite.getWidth() - NOTE_SIDE_WIDTH;
 
-		// 描画幅が狭い場合、テクスチャが圧縮されてぼやけるのを防ぐため、
-		// UV領域もジオメトリ幅に合わせて中央部分のみをクロップ（切り出し）する
 		if (geomWidth > 0.0f)
 		{
-			float maxUvWidth = geomWidth * 100.0f; // 1ユニットあたりの適正テクスチャピクセル数
+			float maxUvWidth = geomWidth * 100.0f;
 			float currentUvWidth = midUvRight - midUvLeft;
 			
 			if (currentUvWidth > maxUvWidth)
@@ -1169,12 +1162,11 @@ namespace MikuMikuWorld
 			renderer->pushQuad(vPos, uv, model, toFloat4(defaultTint), (int)texture.getID(), zIndex);
 		}
 
-		// Left slice (純正完全維持)
 		vPos = lTransform.apply(Engine::perspectiveQuadvPos(noteLeft, noteLeft + 0.25f, noteTop, noteBottom));
 		uv = Utils::getUV((sprite.getX() + NOTE_SIDE_PAD) / texW, (sprite.getX() + NOTE_SIDE_WIDTH) / texW, sprite.getY() / texH, (sprite.getY() + sprite.getHeight()) / texH);
 		renderer->pushQuad(vPos, uv, model, toFloat4(defaultTint), (int)texture.getID(), zIndex);
 		
-		// Right slice (純正完全維持)
+
 		vPos = rTransform.apply(Engine::perspectiveQuadvPos(noteRight - 0.3f, noteRight, noteTop, noteBottom));
 		uv = Utils::getUV((sprite.getX() + sprite.getWidth() - NOTE_SIDE_WIDTH) / texW, (sprite.getX() + sprite.getWidth() - NOTE_SIDE_PAD) / texW, sprite.getY() / texH, (sprite.getY() + sprite.getHeight()) / texH);
 		renderer->pushQuad(vPos, uv, model, toFloat4(defaultTint), (int)texture.getID(), zIndex);
@@ -1216,7 +1208,6 @@ namespace MikuMikuWorld
 		if (!isArrayIndexInBounds(sprIndex, texture.sprites)) return;
 		const Sprite& arrowSprite = texture.sprites[sprIndex];
 
-		//  DownLeft, DownRight も左右フリックとして扱うように判定を追加
 		bool isLeftOrRight = (note.flick == FlickType::Left || note.flick == FlickType::Right || note.flick == FlickType::DownLeft || note.flick == FlickType::DownRight);
 		bool isRightward = (note.flick == FlickType::Right || note.flick == FlickType::DownRight);
 
@@ -1235,11 +1226,11 @@ namespace MikuMikuWorld
 		float texH = (float)texture.getHeight();
 		auto uv = Utils::getUV(arrowSprite.getX() / texW, (arrowSprite.getX() + arrowSprite.getWidth()) / texW, arrowSprite.getY() / texH, (arrowSprite.getY() + arrowSprite.getHeight()) / texH);
 		
-		//  下フリックの場合、UV座標のY軸を入れ替えて画像を上下反転させる
+
 		bool isDown = (note.flick >= FlickType::Down && note.flick <= FlickType::DownRight);
 		if (isDown)
 		{
-			// Utils::getUV は {右上, 右下, 左下, 左上} の順なので、0と1(右側)、3と2(左側)のY座標を入れ替える
+
 			std::swap(uv[0].y, uv[1].y);
 			std::swap(uv[3].y, uv[2].y);
 		}
@@ -1344,7 +1335,7 @@ namespace MikuMikuWorld
 
 		float currentTm = accumulateDuration(context.currentTick, TICKS_PER_BEAT, context.score.tempoChanges);
 		
-		//  ツールバーの表示用には、現在選択されているレイヤーの視覚的時間を用いる
+
 		int currentLayer = std::clamp(context.selectedLayer, 0, (int)context.score.layers.size() - 1);
 		double currentScaledTm = getCachedLayerScaledTime(context, context.currentTick, currentLayer);
 		int currentMeasure = accumulateMeasures(context.currentTick, TICKS_PER_BEAT, context.score.timeSignatures);

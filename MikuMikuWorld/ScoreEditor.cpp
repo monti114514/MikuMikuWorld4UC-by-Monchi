@@ -1,4 +1,3 @@
-﻿// Put httplib first otherwise the compiler will throw an error
 #include <corecrt_math.h>
 #define CPPHTTPLIB_OPENSSL_SUPPORT 1
 #include <cpp-httplib/httplib.h>
@@ -390,24 +389,22 @@ namespace MikuMikuWorld
 
 	void ScoreEditor::update()
 	{
-		// ＝＝＝ 新しいギャラリークラスの呼び出し ＝＝＝
+
 		galleryWindow.update(config.recentFiles);
 
 		if (galleryWindow.pendingCreateNew) {
-			Application::windowState.resetting = true; // 譜面を完全にリセットする命令
+			Application::windowState.resetting = true;
 			galleryWindow.pendingCreateNew = false;
 		}
 
-		// ギャラリー側で譜面が選択されたら、エディタ本体で読み込む
 		if (!galleryWindow.pendingLoadScore.empty()) {
 			loadScore(galleryWindow.pendingLoadScore);
 			galleryWindow.pendingLoadScore.clear();
 			galleryWindow.open = false;
 		}
 
-		// ギャラリーが開いている間は、背後のエディタのUIを描画しない
 		if (galleryWindow.open) return;
-		// ＝＝＝ ここまで ＝＝＝
+
 
 		drawMenubar();
 		drawToolbar();
@@ -954,10 +951,10 @@ namespace MikuMikuWorld
 
 		if (ImGui::BeginMenu(getString("tools")))
 		{
-			// 3D直線化ボタン
+
 			if (ImGui::MenuItem(getString("tools_straighten_3d")))
 			{
-				straightenHold3D(); // 実際の関数を呼び出す
+				straightenHold3D();
 			}
 			
 			ImGui::EndMenu();
@@ -1277,7 +1274,6 @@ namespace MikuMikuWorld
 				}
 				hold.steps.clear();
 
-				// 時間（Scaled Duration）の取得
 				double stm0 = Engine::accumulateScaledDuration(
 				    tickStart, TICKS_PER_BEAT, context.score.tempoChanges,
 				    context.score.hiSpeedChanges, note.layer);

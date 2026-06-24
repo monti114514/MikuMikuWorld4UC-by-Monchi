@@ -161,7 +161,7 @@ namespace MikuMikuWorld
 		for (int i = 0; i < lines.size(); ++i)
 		{
 			std::string line = trim(lines[i]);
-			if (line.empty() || !startsWith(line, "#")) // line.empty() ‚ð’Ç‰Á
+			if (line.empty() || !startsWith(line, "#"))
 				continue;
 
 			if (line.substr(0, 9) == "#HISPEED ")

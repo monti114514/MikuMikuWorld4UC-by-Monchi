@@ -229,8 +229,10 @@
     <ClCompile Include="ScoreEditorDialogs.cpp" />
     <ClCompile Include="ScoreNotePropertiesWindow.cpp" />
     <ClCompile Include="ScoreEditorTimeline.cpp" />
+    <ClCompile Include="ScoreEditorTimelineAudio.cpp" />
     <ClCompile Include="ScoreEditorTimelineGeometry.cpp" />
     <ClCompile Include="ScoreEditorTimelineMetaEvents.cpp" />
+    <ClCompile Include="ScoreEditorTimelinePlayback.cpp" />
     <ClCompile Include="ScoreEditorWindows.cpp" />
     <ClCompile Include="ScorePropertiesWindow.cpp" />
     <ClCompile Include="ScorePreview.cpp" />

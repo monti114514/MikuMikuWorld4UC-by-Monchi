@@ -560,7 +560,7 @@ namespace MikuMikuWorld
 	bool ScoreEditorTimeline::bpmControl(const ScoreContext& context, float bpm, int tick, bool enabled)
 	{
 		float dpiScale = ImGui::GetMainViewport()->DpiScale;
-		// タイムラインの左端（StartX）から左へ110pxの位置に配置
+
 		Vector2 pos{ getTimelineStartX(context) - (110.0f * dpiScale),
 			         position.y - tickToPosition(tick) + visualOffset };
 		return TimelineEventControls::eventControl(
@@ -571,7 +571,7 @@ namespace MikuMikuWorld
 	bool ScoreEditorTimeline::timeSignatureControl(const ScoreContext& context, int numerator, int denominator, int tick, bool enabled)
 	{
 		float dpiScale = ImGui::GetMainViewport()->DpiScale;
-		// タイムラインの左端（StartX）から左へ45pxの位置に配置
+
 		Vector2 pos{ getTimelineStartX(context) - (45.0f * dpiScale),
 			         position.y - tickToPosition(tick) + visualOffset };
 		return TimelineEventControls::eventControl(

@@ -2,7 +2,7 @@
 #include "ChartGalleryWindow.h"
 #include "ScoreEditorWindows.h"
 #include "ScoreSerializeWindow.h"
-#include "ScorePreview.h" // © ‚±‚ê‚ğ’Ç‰Á
+#include "ScorePreview.h"
 #include <future>
 
 namespace MikuMikuWorld
@@ -16,7 +16,7 @@ namespace MikuMikuWorld
 		PresetManager presetManager;
 
 		ScoreEditorTimeline timeline{};
-		ScorePreviewWindow previewWindow{}; // © ‚±‚ê‚ğ’Ç‰Á
+		ScorePreviewWindow previewWindow{};
 		ScorePropertiesWindow propertiesWindow{};
 		ScoreNotePropertiesWindow notePropertiesWindow{};
 		ScoreOptionsWindow optionsWindow{};
@@ -59,7 +59,7 @@ namespace MikuMikuWorld
 		void drawToolbar();
 		void help();
 
-		void straightenHold3D(); // © ‚±‚±‚É’Ç‰ÁF3D’¼ü‰»ŠÖ”‚ÌéŒ¾
+		void straightenHold3D();
 
 		inline void loadPresets(std::string path) { presetManager.loadPresets(path); }
 		inline void savePresets(std::string path) { presetManager.savePresets(path); }

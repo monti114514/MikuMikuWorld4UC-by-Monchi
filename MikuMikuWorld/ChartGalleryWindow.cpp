@@ -409,27 +409,27 @@ namespace MikuMikuWorld
 
 			ImVec2 imgPos = ImVec2(cursorPos.x + padding, cursorPos.y + padding);
 			if (item->texture) {
-				// --- 変更ここから：アスペクト比を保った中央トリミング処理 ---
+
 				ImVec2 uv0 = ImVec2(0.0f, 0.0f);
 				ImVec2 uv1 = ImVec2(1.0f, 1.0f);
 				float texW = (float)item->texture->getWidth();
 				float texH = (float)item->texture->getHeight();
 				
 				if (texW > texH) {
-					// 横長画像の場合：短い方(高さ)に合わせて、左右の端を均等にクロップ
+
 					float offset = (texW - texH) / 2.0f;
 					uv0.x = offset / texW;
 					uv1.x = (offset + texH) / texW;
 				} else if (texH > texW) {
-					// 縦長画像の場合：短い方(幅)に合わせて、上下の端を均等にクロップ
+
 					float offset = (texH - texW) / 2.0f;
 					uv0.y = offset / texH;
 					uv1.y = (offset + texW) / texH;
 				}
 				
-				// 計算した切り取り範囲(uv0, uv1)を使って描画
+
 				drawList->AddImageRounded((void*)(intptr_t)item->texture->getID(), imgPos, ImVec2(imgPos.x + imageSize, imgPos.y + imageSize), uv0, uv1, IM_COL32(255, 255, 255, 255), 4.0f);
-				// --- 変更ここまで ---
+
 			} else if (defaultIcon) {
 				drawList->AddImageRounded((void*)(intptr_t)defaultIcon->getID(), imgPos, ImVec2(imgPos.x + imageSize, imgPos.y + imageSize), ImVec2(0, 0), ImVec2(1, 1), IM_COL32(255, 255, 255, 255), 4.0f);
 			}
@@ -454,7 +454,6 @@ namespace MikuMikuWorld
 			float valueStartX = textStartX + labelWidth + 12.0f;
 			drawList->AddLine(ImVec2(textStartX + labelWidth, textStartY), ImVec2(textStartX + labelWidth, textStartY + 7 * 16.5f), IM_COL32(80, 80, 80, 255));
 
-			// ここで翻訳キーを使ってラベルを表示します
 			const char* labels[] = { getString("gallery_file"), getString("gallery_format"), getString("gallery_title"), getString("gallery_artist"), getString("gallery_author"), getString("gallery_time"), getString("gallery_combo") };
 			std::string values[] = { item->filename, item->extension, item->title, item->artist, item->author, item->lengthStr, std::to_string(item->totalCombo) };
 			for (int row = 0; row < 7; ++row) {
@@ -480,7 +479,7 @@ namespace MikuMikuWorld
 			drawList->AddText(ImVec2(textX, titleBarStart.y + 4.0f), IM_COL32(255, 255, 255, 255), item->title.c_str());
 			drawList->PopClipRect();
 			
-			// タグ名の表示（システムフォルダーの場合は翻訳キーを参照します）
+
 			std::string displayFolderName = item->folder;
 			if (displayFolderName == "Team Projects") displayFolderName = getString("gallery_team_projects");
 			else if (displayFolderName == "Personal") displayFolderName = getString("gallery_personal");
@@ -529,7 +528,7 @@ namespace MikuMikuWorld
 					}
 
 					for (const auto& folderName : displayFolders) {
-						// メニュー内のシステムフォルダー名を翻訳して表示
+
 						std::string menuDisplayName = folderName;
 						if (folderName == "Team Projects") menuDisplayName = getString("gallery_team_projects");
 						else if (folderName == "Personal") menuDisplayName = getString("gallery_personal");
@@ -602,15 +601,15 @@ namespace MikuMikuWorld
 				ImGui::TableNextRow();
 	
 				ImGui::TableSetColumnIndex(0);
-				drawSidebar(); // 切り出した関数を呼び出す
+				drawSidebar();
 	
 				ImGui::TableSetColumnIndex(1);
-				drawMainContent(); // 切り出した関数を呼び出す
+				drawMainContent();
 	
 				ImGui::EndTable();
 			}
 	
-			drawDeletePopup(); // 切り出した関数を呼び出す
+			drawDeletePopup();
 		}
 		ImGui::End();
 	}
@@ -622,7 +621,6 @@ namespace MikuMikuWorld
 	
 		ImGui::Dummy(ImVec2(0.0f, 12.0f));
 
-		// ボタンを描画して、クリックされたら true を返す共通処理
 		auto drawLargeSidebarButton = [&](const char* id, const char* text, Texture* iconTex, const char* leftIconStr, const char* rightIconStr) -> bool {
 			ImVec2 btnPos = ImGui::GetCursorScreenPos();
 			float btnWidth = ImGui::GetContentRegionAvail().x - 8.0f;
@@ -641,7 +639,6 @@ namespace MikuMikuWorld
 			float iconSizeVal = 32.0f;
 			float textStartX = btnPos.x + 12.0f;
 
-			// アプリアイコン または FontAwesomeアイコンを左に描画
 			if (iconTex) {
 				ImVec2 iconPos = ImVec2(btnPos.x + 10.0f, btnPos.y + (btnHeight - iconSizeVal) * 0.5f);
 				drawList->AddImage((void*)(intptr_t)iconTex->getID(), iconPos, ImVec2(iconPos.x + iconSizeVal, iconPos.y + iconSizeVal));
@@ -653,12 +650,10 @@ namespace MikuMikuWorld
 				textStartX = iconPos.x + leftIconSize.x + 16.0f;
 			}
 
-			// テキストを描画
 			ImVec2 textSize = ImGui::CalcTextSize(text);
 			float textY = btnPos.y + (btnHeight - textSize.y) * 0.5f;
 			drawList->AddText(ImVec2(textStartX, textY), IM_COL32(240, 240, 240, 255), text);
 
-			// 右端のアイコン（+マークなど）を描画
 			if (rightIconStr) {
 				ImVec2 rightIconSize = ImGui::CalcTextSize(rightIconStr);
 				float rightIconX = btnPos.x + btnWidth - rightIconSize.x - 12.0f;
@@ -670,14 +665,14 @@ namespace MikuMikuWorld
 		};
 
 		if (drawLargeSidebarButton("CreateNewChartBtn", getString("gallery_create_new_chart"), appIcon.get(), nullptr, ICON_FA_PLUS)) {
-			pendingCreateNew = true; // 新規作成フラグを立てる
-			open = false;            // ギャラリーを閉じる
+			pendingCreateNew = true;
+			open = false;
 		}
 
 		ImGui::Dummy(ImVec2(0.0f, 8.0f));
 
 		if (drawLargeSidebarButton("ReturnToEditorBtn", getString("gallery_return_to_editor"), nullptr, ICON_FA_ARROW_LEFT, nullptr)) {
-			open = false; // ギャラリーを閉じるだけ（現在の譜面を維持）
+			open = false;
 		}
 
 			ImGui::Dummy(ImVec2(0.0f, 12.0f));
