@@ -1,214 +1,227 @@
 # code: ru
 # key, value
 
-# translation by Nobody (@_notfallen_)
+# translation by @_notfallen_ and @hellcxrttt
 
-language_name, Русский
+language_name,Русский
 
-# menu bar / бар меню
-file, Файл
-new, Новый
-open, Открыть
-open_recent, Открыть недавний
-clear, Очистить
-save, Сохранить
-save_as, Сохранить как
-export_score, Экспортировать
-exit, Выйти
-edit, Изменить
-undo, Отменить
-redo, Переделать
-select_all, Выбрать всё
-view, Вид
-settings, Настройки
-window, Окно
-vsync, VSync
-show_fps, Показывать FPS
-debug, Отладка
-create_auto_save, Создать авто-сохранение
-help, Помощь
-about, О приложении
+# Menu bar / Строка меню
+file,Файл
+new,Создать
+open,Открыть
+open_recent,Открыть недавний
+clear,Очистить
+file_open_gallery,Открыть каталог
+save,Сохранить
+save_as,Сохранить как
+export_score,Экспортировать
+exit,Выйти
+edit,Изменить
+undo,Отменить
+redo,Вернуть
+select_all,Выбрать всё
+tools,Инструменты
+tools_straighten_3d,3D Straighten
+view,Вид
+settings,Настройки
+window,Окно
+vsync,Вертикальная синхронизация
+show_fps,Показывать FPS
+debug,Отладка
+create_auto_save,Создать файл автосохранения
+help,Помощь
+about,O программе
 
-# dialogs
-file_not_found, Файл не найден
-file_not_found_msg1, Файл
-file_not_found_msg2, Он не был найден
-remove_recent_file_not_found, Вы хотите удалить его из недавних файлов?
-yes, Да
-no, Нет
-unsaved_changes, Несохранённые изменения
-ask_save, Сохранить несохранённые изменения?
-warn_unsaved, Любые несохранённые изменения исчезнут.
-save_changes, Сохранить изменения
-discard_changes, Сбросить изменения
-update_available, Обновление приложения доступно!
-update_available_description, Версия %s доступна. Хотите открыть его в браузере?
-score_file, Файл нот
-#- export_successful,
-#- unknown_file_format,
-#- open_as_file_format,
-#- export_as_file_format,
-error, Ошибка
-error_load_score_file, Произошла ошибка при попытке прочитать ноты.
-#- error_save_score_file,
-error_load_music_file, Не удалось открыть файл музыки.
-#- score_partially_missing,
-cancel, Отмена
-general, Общий
-key_config, Конфигурация клавиш
-language, Язык
-minify, Минифицировать
-auto, Авто
-auto_save, Авто-сохранение
-auto_save_enable, Авто-сохранение включено
-auto_save_interval, Интервал авто-сохранения (мин)
-auto_save_count, Максимальное количество авто-сохранений
-accent_color, Акцентный цвет
-accent_color_help, Выберите акцентный цвет чтобы применить
-select_accent_color, Выберите акцентный цвет
-display_mode, Режим интерфейса
-theme, Тема
-base_theme, Базовая тема
-theme_light, Светлая
-theme_dark, Тёмная
-custom_color, Кастомный цвет
-timeline, Таймлайн
-match_notes_size_to_timeline, Сопоставить размер нот с шириной таймлайна
-lane_width, Ширина полосы
-notes_height, Высота нот
-scrolling, Прокручивание
-scroll_speed_normal, Скорость прокрутки
-scroll_speed_shift, Скорость прокрутки (Шифт)
-use_smooth_scroll, Использовать плавную прокрутку
-smooth_scroll_time, Время плавной прокрутки
-return_to_last_tick, Вернуться к последнему тику на паузе
-cursor_auto_scroll, Авто-прокрутка курсора
-cursor_auto_scroll_amount, Процент авто-прокрутки курсора с таймлайна
-background, Задний фон
-background_image, Фотография заднего фона
-draw_background, Нарисовать фотографию заднего фона
-background_brightnes, Яркость заднего фона
-lanes_opacity, Непрозрачность полосы
-video, Видео
-notes_se, Звуковой эффект нот
-show_tick_in_properties, Показывать тик в характеристиках
+# Dialogs / Диалоговые окна
+file_not_found,Файл не найден
+file_not_found_msg1,Файл
+file_not_found_msg2,не найден
+remove_recent_file_not_found,Удалить этот файл из списка недавних?
+yes,Да
+no,Нет
+unsaved_changes,Несохранённые изменения
+ask_save,Сохранить изменения?
+warn_unsaved,Несохранённые изменения будут потеряны.
+save_changes,Сохранить изменения
+discard_changes,Отменить изменения
+update_available,Новая версия доступна!
+update_available_description,Версия %s доступна для скачивания. Перейти на страницу загрузки?
+score_file,Файл партитуры
+export_successful,Экспорт выполнен успешно
+unknown_file_format,Неизвестный формат файла
+open_as_file_format,Открыть файл как...
+export_as_file_format,Экспортировать как...
+error,Ошибка
+error_load_score_file,Ошибка при чтении файла партитуры
+error_save_score_file,Ошибка при сохранении файла партитуры
+error_load_music_file,He удалось открыть музыкальный файл
+score_partially_missing,Некоторые части партитуры могут отсутствовать!
+cancel,Отмена
+general,Основные
+key_config,Горячие клавиши
+language,Язык
+minify,Сжать
+auto,Авто
+auto_save,Автосохранение
+auto_save_enable,Автосохранение включено
+auto_save_interval,Интервал автосохранения (мин.)
+auto_save_count,Максимум автосохранений
+accent_color,Акцентный цвет
+accent_color_help,Выберите акцентный цвет для применения. Можете выбрать его из палитры ниже.
+select_accent_color,Выбрать свой акцентный цвет.
+display_mode,Формат отображения
+theme,Тема
+base_theme,Основная тема
+theme_light,Светлая
+theme_dark,Тёмная
+custom_color,Другой цвет...
+timeline,Таймлайн
+match_notes_size_to_timeline,Сопоставить высоту нот c шириной таймлайна
+lane_width,Ширина таймлайна
+notes_height,Высота нот
+scrolling,Прокрутка
+scroll_speed_normal,Скорость прокрутки
+scroll_speed_shift,Скорость прокрутки (Зажать Shift)
+use_smooth_scroll,Плавная прокрутка
+smooth_scroll_time,Время плавной прокрутки
+return_to_last_tick,Возвращаться к последнему тику на паузе
+cursor_auto_scroll,Авто-прокрутка курсора
+cursor_auto_scroll_amount,Авто-прокрутка курсора c таймлайна
+background,Задний фон
+background_image,Изображение заднего фона
+draw_background,Отображать изображение заднего фона
+background_brightnes,Яркость заднего фона
+lanes_opacity,Прозрачность таймлайна
+video,Видео
+notes_se,Звуковые эффекты нот
+show_tick_in_properties,Показывать тик в окне характеристик ноты
+sort_ascending,По возрастанию
+sort_descending,По убыванию
 
-# score editor / Редактор уровня
-options, Настройки
-chart_properties, Характеристики чарта
-note_properties, Характеристики нот
-notes_timeline, Таймлайн нот
-select, Выбрать
-tap, Нота
-hold, Холд
-hold_step, Тик холда
-flick, Флик
-critical, Критикал
-#- dummy,
-#- hold_dummy,
-trace, След
-guide, Гайд
-damage, Дамаг
-bpm, BPM
-time_signature, Отметка времени
-none, Ничего
-default, По умолчанию
-left, Влево
-right, Вправо
-#- down,
-#- down_left,
-#- down_right,
-normal, Обычный
-hidden, Скрытый
-skip, Пропустить
-linear, Линейно
-ease_in, Ease In
-ease_out, Ease Out
-ease_in_out, Ease In Out
-ease_out_in, Ease Out In
-delete, Удалить
-copy, Скопировать
-cut, Вырезать
-paste, Вставить
-flip_paste, Вставить и повернуть
-duplicate, Дублировать
-flip_duplicate, Дублировать и повернуть
-flip, Повернуть
-note_width, Ширина нот
-shrink_down, Уменьшить
-shrink_up, Увеличить
-#- compress_selection,
-connect_holds, Соединить холды
-split_hold, Разделить холды
-audio_clip_split, Split Clip
-repeat_hold_mids, Повторить Тик Холдов
-#- hold_to_traces,
-#- add_traces_for_hold,
-#- convert_hold_to_traces,
-#- convert_guide_hold,
-#- convert_guide_to_hold,
-#- convert_hold_to_guide,
-lerp_hispeeds, Интерполяция Hi-Speeds
-step_type, Тип шага
-ease_type, Тип изгиба
-flick_type, Тип флика
-hold_type, Тип холда
-fade_type, Тип исчезновения
-#- hold_start_type,
-#- hold_end_type,
-metadata, Метадата
-title, Название
-designer, Дизайнер
-artist, Певец
-jacket, Обложка
-lane_extension, Расширение полос
-audio, Аудио
-music_file, Файл музыки
-music_offset, Смещение музыки
-volume_master, Общая громкость
-volume_bgm, Громкость песни
-volume_se, Громкость звуковых эффектов
-statistics, Статистика
-#- hispeeds,
-taps, Ноты
-flicks, Флики
-holds, Холды
-steps, Тик холдов
-#- guides,
-traces, Следы
-total, Общий
-combo, Комбо
-goto_measure, Перейти к измерению
-division, Деление %d
-division_affix, %d Делений
-custom, Кастом
-custom_division, Кастомное деление
-snap_mode, Snapping
-snap_mode_relative, Похожий Snap
-snap_mode_absolute, Абсолютный Snap
-snap_mode_individual_absolute, Индивидуальный Абсолютный Snap
-zoom, Приблизить
-show_step_outlines, Показать контуры шагов
-draw_waveform, Показать форму волны
-edit_bpm, Изменить BPM
-tick, Тик
-remove, Удалить
-edit_time_signature, Изменить отметку времени
-measure, Такт
-meta_event,Meta Event
-skill, Скилл
-fever, FEVER
-increase_note_size, Увеличить размер ноты
-decrease_note_size, Уменьшить размер ноты
-hi_speed, Hi-speed
-edit_hi_speed, Изменить Hi-speed
-hi_speed_speed, Скорость
-#- hi_speed_skip_beat,
-#- hi_speed_ease,
-#- hi_speed_ease_none,
-#- hi_speed_ease_linear,
-#- hi_speed_hide_notes,
-fade_none, Без исчезновения
+
+# Score Editor / Редактор партитуры
+options,Опции
+chart_properties,Характеристики чарта
+note_properties,Характеристики ноты
+notes_timeline,Таймлайн
+select,Выбрать
+tap,Нота
+hold,Слайдер
+hold_step,Шаг слайдера
+flick,Флик
+critical,Нота (Крит.)
+dummy,Фейк
+hold_dummy,Фейк слайдер
+trace,Трейс
+guide,Гид
+damage,Нота (Урон)
+bpm,BPM
+time_signature,Тактовый размер
+none,Ничего
+default,Вверх
+left,Влево
+right,Вправо
+down,Вниз
+down_left,Вниз влево
+down_right,Вниз вправо
+normal,Обычный
+hidden,Скрытый
+skip,Пропустить
+linear,Линейно
+ease_in,Изгиб внутрь (Ease In)
+ease_out,Изгиб наружу (Ease Out)
+ease_in_out,Изгиб внутрь-наружу (Ease In-Out)
+ease_out_in,Изгиб наружу-внутрь (Ease Out-In)
+delete,Удалить
+copy,Копировать
+cut,Вырезать
+paste,Вставить
+flip_paste,Вставить c отражением
+duplicate,Дублировать
+flip_duplicate,Дублировать c отражением
+flip,Отразить
+note_width,Ширина ноты
+shrink_down,Сжать вниз
+shrink_up,Сжать вверх
+compress_selection,Сжать выбранное
+connect_holds,Соединить слайдеры
+split_hold,Разделить слайдеры
+audio_clip_split,Извлечь фрагмент
+repeat_hold_mids,Повторять шаги
+hold_to_traces,Трейс-конвертация
+add_traces_for_hold,Добавить трейсы в шаги
+convert_hold_to_traces,Конвертировать начало и конец слайдера в трейсы
+convert_guide_hold,Конвертировать
+convert_guide_to_hold,Конвертировать гайд в слайдер
+convert_hold_to_guide,Конвертировать слайдер в гайд
+lerp_hispeeds,Добавить промежуточные значения Hi-Speed
+step_type,Тип шага слайдера
+ease_type,Тип изгиба
+flick_type,Тип флика
+hold_type,Тип слайдера
+fade_type,Тип исчезновения
+hold_start_type,Тип начала слайдера
+hold_end_type,Тип конца слайдера
+metadata,Метаданные
+title,Название
+designer,Дизайнер партитуры
+artist,Композитор
+jacket,Обложка
+lane_extension,Расширение полос
+audio,Аудио
+music_file,Файл музыки
+music_offset,Смещение музыки
+volume_master,Общая громкость
+volume_bgm,Громкость музыки
+volume_se,Громкость звуковых эффектов нот
+statistics,Статистика
+hispeeds,Hi-Speeds
+taps,Ноты
+flicks,Флики
+holds,Слайдеры
+steps,Шаги слайдеров
+guides,Гиды
+traces,Трейсы
+total,Всего
+combo,Комбо
+goto_measure,Перейти к такту
+division,Деление %d
+division_affix,%d Делений
+custom,Свой
+custom_division,Задать своё значение деления
+snap_mode,Режим привязки
+snap_mode_relative,Относительная привязка
+snap_mode_absolute,Абсолютная привязка
+snap_mode_individual_absolute,Индивидуальная абсолютная привязка
+quantize,Деление
+edit_target,Режим редактирования
+edit_target_notes,Ноты
+edit_target_audio,Аудиофайл
+playback_speed,Скорость воспроизведения
+audio_lock,Блокировка аудио
+level_data,Данные партитуры
+zoom,Приблизить
+show_step_outlines,Показывать обводку шагов
+draw_waveform,Отображать аудиоволну
+edit_bpm,Изменить BPM
+tick,Тик
+remove,Убрать
+edit_time_signature,Изменить тактовый размер
+measure,Такт
+meta_event,Мета событие
+skill,Событие навыка (Скилл карточки)
+fever,Событие FEVER
+increase_note_size,Увеличить размер ноты
+decrease_note_size,Уменьшить размер ноты
+hi_speed,Hi-Speed
+edit_hi_speed,Изменить Hi-Speed
+hi_speed_speed,Значение
+hi_speed_skip_beat,Пропустить
+hi_speed_ease,Сглаживание
+hi_speed_ease_none,По умолчанию
+hi_speed_ease_linear,Линейно
+hi_speed_hide_notes,Спрятать ноты
+fade_none,Без исчезновения
 fade_in, Исчезновение (в начале)
 fade_out, Исчезновение (в конце)
 guide_color, Цвет гайда
@@ -220,53 +233,53 @@ guide_yellow, Жёлтый
 guide_purple, Фиолетовый
 guide_cyan, Голубой
 guide_black, Чёрный
-layer, Слой
-edit_skill, Изменить Skill триггер
-edit_fever,　Изменить FEVER триггер
-edit_none,　Изменить
-edit_event,　Изменить событие
+layer,Слой
+edit_skill,Изменить триггер навыка
+edit_fever,Изменить FEVER триггер
+edit_none,Изменить
+edit_event,Изменить событие
 beat, Бит
 lane, Полоса
 width, Ширина
-advanced, Продвинутое
+advanced, Расширенное
 note_properties_note, Характеристики ноты
 note_properties_hi_speed, Характеристики Hi-Speed
-note_properties_hold_note, Характеристики холд ноты
-note_properties_guide, Характеристики гайд ноты
+note_properties_hold_note, Характеристики слайдер-ноты
+note_properties_guide, Характеристики гид-ноты
 note_properties_not_selected, Никаких нот или Hi-Speed не было выбрано
-#- note_properties_many_hold_notes,
-zoom_tooltip, Ctrl-клик чтобы изменить значение
+note_properties_many_hold_notes,Выбрано более одного слайдера
+zoom_tooltip,Ctrl-клик чтобы изменить значение
 
-# preset manager / менеджер пресетов
+# Preset Manager / Менеджер пресетов
 presets, Пресеты
 no_presets, Нет доступных пресетов
-preset_name, Имя
+preset_name, Название
 description, Описание
 create_preset, Создать пресет
 search, Поиск...
 confirm, Подтвердить
 
-# layer manager / менеджер слоёв
+# Layer Manager / Менеджер слоёв
 layers, Слой
-layer_name, Имя
+layer_name, Название
 create_layer, Создать слой
 confirm, Подтвердить
 show_all_layers, Показать все слои
 layer_rename, Переименовать слой
 layer_up, Передвинуть вверх
 layer_down, Передвинуть вниз
-layer_merge, Соединить слой
+layer_merge, Соединить слои
 layer_delete, Удалить слой
 layer_hide, Спрятать слой
 layer_show, Показать слой
 
-# waypoint manager / менеджер меток
+# Waypoint Manager / Менеджер меток
 waypoints, Метки
 create_waypoint, Создать метку
 edit_waypoint, Изменить метку
-waypoint_name, Имя
+waypoint_name, Название
 
-# commands / команды
+# Commands / Команды
 action, Действие
 keys, Иконки
 add, Добавить
@@ -279,65 +292,143 @@ previous_tick, Прошлый тик
 next_tick, Следующий тик
 timeline_select, Таймлайн - Выбрать
 timeline_tap, Таймлайн - Вставьте ноту
-timeline_hold, Таймлайн - Вставьте холд
-timeline_hold_step, Таймлайн - Вставьте холд тик
+timeline_hold, Таймлайн - Вставьте слайдер
+timeline_hold_step, Таймлайн - Вставьте шаг-ноту
 timeline_flick, Таймлайн - Вставьте флик
-timeline_critical, Таймлайн - Вставьте критикал
-timeline_trace, Таймлайн - Вставьте след
-timeline_guide, Таймлайн - Вставьте гайд
-timeline_damage, Таймлайн - Вставьте дамаг
-#- timeline_dummy,
+timeline_critical, Таймлайн - Вставьте ноту (крит.)
+timeline_trace, Таймлайн - Вставьте трейс-ноту
+timeline_guide, Таймлайн - Вставьте гид-ноту
+timeline_damage, Таймлайн - Вставьте ноту урона
+timeline_dummy, Таймлайн - Вставьте фейк-ноту
 timeline_bpm, Таймлайн - Вставьте BPM
-timeline_time_signature, Таймлайн - Вставьте отметку времени
+timeline_time_signature, Таймлайн - Вставьте тактовый размер
 timeline_hi_speed, Таймлайн - Вставьте Hi-Speed
 zoom_in, Приблизить
 zoom_out, Отдалить
 
-# Upstream LevelData fields
-life_point,Life Point
-sound_effect,SFX
-sound_effect_default,Default
-sound_effect_none,None
-sound_effect_tap_perfect,TapPerfect
-sound_effect_flick,Flick
-sound_effect_trace,Trace
-sound_effect_tick,Tick
-sound_effect_crit_tap,CritTap
-sound_effect_crit_flick,CritFlick
-sound_effect_crit_trace,CritTrace
-sound_effect_crit_tick,CritTick
-sound_effect_damage,Damage
-hold_step_layer,Hold Step Layer
-hold_step_layer_top,Top
-hold_step_layer_bottom,Bottom
-hold_step_layer_under,Under
-hold_step_layer_over,Over
-skill_effect,Effect
-skill_effect_score,Score Boost
-skill_effect_heal,Heal
-skill_effect_perfect,Perfect Lock
-skill_level,Level
-skill_effect_score_desc,Increases score gain while active.
-skill_effect_heal_desc,Restores life when activated.
-skill_effect_perfect_desc,Strengthens judgment support while active.
-skill_level_desc,Level 1-4 is exported to Skill.level.
-fever_start_tick,FEVER Start Tick
-fever_end_tick,FEVER End Tick
-layer_force_note_speed_enabled,Force Note Speed
-layer_force_note_speed,Force Note Speed
-insert_skill,Insert Skill
-set_fever_start,Set FEVER Start
-set_fever_end,Set FEVER End
-quantize, Quantize
-edit_target, Edit Target
-edit_target_notes, Notes Edit
-edit_target_audio, Audio Edit
-playback_speed, Playback Speed
-audio_lock, Audio Lock
-level_data, Level Data
-quick_settings,Quick Settings
-edit_assist_settings,Edit Assist Settings
-pinned_settings,Pinned Settings
-pin_quick_setting,Show in Quick Settings
-unpin_quick_setting,Hide from Quick Settings
-no_pinned_settings,No pinned settings
+# Preview Window / Окно предпросмотра 
+preview,Предпросмотр
+score_preview,Предпросмотр партитуры
+notes_speed,Скорость нот
+mirror_score,Отзеркалить партитуру
+preview_draw_toolbar,Отображать окно инструментов
+background_brightnes,Яркость заднего фона
+stage_opacity,Прозрачность сцены
+stage_cover,Верхняя шторка сцены
+visuals,Отображение
+flicks_animation,Анимации фликов
+holds_animation,Анимации слайдеров
+simultaneous_lines,Линии одновременного нажатия
+holds_alpha,Прозрачность слайдеров
+guides_alpha,Прозрачность гид-нот
+action,Действие
+keys,Комбинация клавиш
+add,Добавить комбинацию клавиш
+remove,Удалить
+none,Ничего
+cmd_key_listen,Ожидание нажатия...
+key_config,Горячие клавиши
+
+# Layers & Waypoints / Слои и метки
+new_layer,Новый слой
+new_folder,Новая папка
+create_folder,Создать папку
+layer_merge_confirm,Объединить слои
+layer_merge_msg,Объединить этот слой со слоем ниже?
+layer_delete_confirm,Удалить слой
+layer_delete_msg1,Вы уверены что хотите удалить этот слой?
+layer_delete_msg2,Все ноты внутри слоя также будут удалены.
+sort_asc,Сортировать по возрастанию
+sort_desc,Сортировать по убыванию
+new_waypoint,Новая метка
+name,Название
+time,Время
+
+# Gallery / Каталог
+gallery_all,Все
+gallery_recent,Недавние
+gallery_favorites,Избранные
+gallery_team_projects,Групповые проекты
+gallery_personal,Личные проекты
+gallery_no_charts,Партитуры не найдены
+gallery_file,Имя файла
+gallery_format,Формат
+gallery_title,Название
+gallery_artist,Композитор
+gallery_author,Чартер
+gallery_time,Время
+gallery_combo,Комбо
+gallery_move_to_folder,Переместить в папку
+gallery_uncategorized,- (Без категории)
+gallery_create_new_chart,Новый чарт
+gallery_recent_charts,Недавние партитуры
+gallery_more,Ещё
+gallery_all_charts,Все партитуры на устройстве
+gallery_add_path,Добавить путь:
+gallery_search_paths,Пути поиска
+gallery_rescan_paths,Обновить
+gallery_browse_folder,Выбрать папку
+gallery_path_input_hint,Введите путь к папке и нажмите Enter
+gallery_folder_dialog_open,Выбор папки...
+gallery_invalid_search_path,Указанный путь не существует или не является папкой.
+gallery_start_scan,Сканировать пути
+gallery_delete_file,Удалить файл
+gallery_delete_confirm,Вы уверены что хотите безвозвратно удалить этот файл?
+gallery_type_file,Тип: %s файл
+gallery_type_unknown,Тип: Неизвестный файл
+gallery_size_kb,Размер: %llu КБ
+gallery_original_location,Исходное расположение: %s
+gallery_yes_y,Да
+gallery_no_n,Нет
+gallery_show_search_paths,Показать пути
+gallery_hide_search_paths,Спрятать пути
+gallery_search,Поиск
+gallery_sort,Сортировать по...
+gallery_created,Дата создания
+gallery_name_sort,Имя
+gallery_sort_ascending,По возрастанию
+gallery_sort_descending,По убыванию
+gallery_modified,Последнее изменение
+gallery_return_to_editor,Назад в редактор
+
+# Upstream LevelData fields / Поля LevelData из исходного кода
+life_point,Очки жизни
+sound_effect,Эффект нажатия ноты
+sound_effect_default,По умолчанию
+sound_effect_none,Ничего
+sound_effect_tap_perfect,Нажатие PERFECT
+sound_effect_flick,Флик
+sound_effect_trace,Трейс
+sound_effect_tick,Tик
+sound_effect_crit_tap,Нота (Крит)
+sound_effect_crit_flick,Флик (Крит)
+sound_effect_crit_trace,Трейс (Крит)
+sound_effect_crit_tick,Тик (Крит)
+sound_effect_damage,Нота урона
+hold_step_layer,Слой шага слайдера
+hold_step_layer_top,Верх
+hold_step_layer_bottom,Низ
+hold_step_layer_under,Под
+hold_step_layer_over,Над
+skill_effect,Эффект навыка
+skill_effect_score,Увеличение счёта
+skill_effect_heal,Лечение
+skill_effect_perfect,PERFECT-локер
+skill_level,Уровень навыка
+skill_effect_score_desc,Увеличивает получаемые очки во время действия.
+skill_effect_heal_desc,Восстанавливает здоровье при активации.
+skill_effect_perfect_desc,Все нажатия будут регистрироваться как PERFECT.
+skill_level_desc,Уровни 1–4 экспортируются в Skill.level.
+fever_start_tick,Тик начала FEVER
+fever_end_tick,Тик завершения FEVER
+layer_force_note_speed_enabled,Принудительная игровая скорость
+layer_force_note_speed,Значение
+insert_skill,Вставить навык
+set_fever_start,Установить начало FEVER
+set_fever_end,Установить конец FEVER
+quick_settings,Быстрые настройки
+edit_assist_settings,Вспомогательные настройки
+pinned_settings,Закрепленные настройки
+pin_quick_setting,Показывать в быстрых настройках
+unpin_quick_setting,Скрывать в быстрых настройках
+no_pinned_settings,Нет закрепленных настроек
