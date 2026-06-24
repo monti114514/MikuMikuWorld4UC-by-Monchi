@@ -238,6 +238,7 @@
     <ClCompile Include="ScorePreview.cpp" />
     <ClCompile Include="ScorePreviewBackground.cpp" />
     <ClCompile Include="ScorePreviewEffects.cpp" />
+    <ClCompile Include="ScorePreviewNotes.cpp" />
     <ClCompile Include="ScorePreviewStage.cpp" />
     <ClCompile Include="ScorePreviewUI.cpp" />
     <ClCompile Include="ScoreMetaEventUtils.cpp" />
