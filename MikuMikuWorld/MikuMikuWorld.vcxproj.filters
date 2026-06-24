@@ -212,6 +212,8 @@
     <ClCompile Include="PreviewEngine.cpp" />
     <ClCompile Include="ScorePreview.cpp" />
     <ClCompile Include="ScorePreviewBackground.cpp" />
+    <ClCompile Include="ScorePreviewEffects.cpp" />
+    <ClCompile Include="ScorePreviewStage.cpp" />
     <ClCompile Include="ScorePreviewUI.cpp" />
     <ClCompile Include="MinMax.cpp" />
     <ClCompile Include="Particle.cpp">
