@@ -594,7 +594,7 @@ namespace MikuMikuWorld
 	
 		if (ImGui::Begin("GalleryScreen", &open, ImGuiWindowFlags_NoDecoration | ImGuiWindowFlags_NoMove))
 		{
-			if (openDeletePopup) { ImGui::OpenPopup(getString("gallery_delete_file")); openDeletePopup = false; }
+			if (openDeletePopup) { ImGui::OpenPopup(MODAL_TITLE("gallery_delete_file")); openDeletePopup = false; }
 			
 			if (ImGui::BeginTable("GalleryLayout", 2, ImGuiTableFlags_Resizable | ImGuiTableFlags_BordersInnerV)) {
 				ImGui::TableSetupColumn("Sidebar", ImGuiTableColumnFlags_WidthFixed, 200.0f);
@@ -1038,7 +1038,7 @@ namespace MikuMikuWorld
 
 	void ChartGalleryWindow::drawDeletePopup()
 {
-	if (ImGui::BeginPopupModal(getString("gallery_delete_file"), NULL, ImGuiWindowFlags_AlwaysAutoResize)) {
+	if (ImGui::BeginPopupModal(MODAL_TITLE("gallery_delete_file"), NULL, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings)) {
 		std::filesystem::path p = IO::mbToWideStr(itemToDelete);
 		std::string filename = "";
 		std::string dirStr = "";

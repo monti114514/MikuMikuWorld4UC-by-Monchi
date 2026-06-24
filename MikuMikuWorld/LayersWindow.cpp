@@ -83,7 +83,7 @@ namespace MikuMikuWorld
 			if (!canMerge) ImGui::BeginDisabled();
 			if (UI::transparentButton(ICON_FA_LEVEL_DOWN_ALT, ImVec2(layersButtonHeight, layersButtonHeight), false))
 			{
-				ImGui::OpenPopup(getString("layer_merge_confirm"));
+				ImGui::OpenPopup(MODAL_TITLE("layer_merge_confirm"));
 			}
 			if (!canMerge) ImGui::EndDisabled();
 			ImGui::SameLine();
@@ -92,7 +92,7 @@ namespace MikuMikuWorld
 			if (!canDelete) ImGui::BeginDisabled();
 			if (UI::transparentButton(ICON_FA_TRASH, ImVec2(layersButtonHeight, layersButtonHeight), false))
 			{
-				ImGui::OpenPopup(getString("layer_delete_confirm"));
+				ImGui::OpenPopup(MODAL_TITLE("layer_delete_confirm"));
 			}
 			if (!canDelete) ImGui::EndDisabled();
 
@@ -418,7 +418,7 @@ namespace MikuMikuWorld
 				context.pushHistory("Toggle Solo Layer", prev, context.score);
 			}
 
-			if (ImGui::BeginPopupModal(getString("layer_delete_confirm"), NULL, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings))
+			if (ImGui::BeginPopupModal(MODAL_TITLE("layer_delete_confirm"), NULL, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings))
 			{
 				ImGui::Text("%s", getString("layer_delete_msg1"));
 				ImGui::TextColored(ImVec4(1.0f, 0.4f, 0.4f, 1.0f), "%s", getString("layer_delete_msg2"));
@@ -436,7 +436,7 @@ namespace MikuMikuWorld
 				ImGui::EndPopup();
 			}
 
-			if (ImGui::BeginPopupModal(getString("layer_merge_confirm"), NULL, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings))
+			if (ImGui::BeginPopupModal(MODAL_TITLE("layer_merge_confirm"), NULL, ImGuiWindowFlags_AlwaysAutoResize | ImGuiWindowFlags_NoSavedSettings))
 			{
 				ImGui::Text("%s", getString("layer_merge_msg"));
 				ImGui::Separator();
@@ -549,7 +549,7 @@ namespace MikuMikuWorld
 		
 		bool popupOpened = false;
 		if (renameIndex == -2)
-			popupOpened = ImGui::BeginPopupModal("Create Folder", NULL, ImGuiWindowFlags_NoResize);
+			popupOpened = ImGui::BeginPopupModal(MODAL_TITLE("create_folder"), NULL, ImGuiWindowFlags_NoResize);
 		else if (renameIndex >= 0)
 			popupOpened = ImGui::BeginPopupModal(MODAL_TITLE("layer_rename"), NULL, ImGuiWindowFlags_NoResize);
 		else
@@ -564,7 +564,7 @@ namespace MikuMikuWorld
 			float yPos = ImGui::GetWindowSize().y - UI::btnSmall.y - 2.0f - (padding.y * 2);
 
 			if (renameIndex == -2)
-				ImGui::Text("Folder Name");
+				ImGui::Text("%s", getString("layer_name"));
 			else
 				ImGui::Text("%s", getString("layer_name"));
 

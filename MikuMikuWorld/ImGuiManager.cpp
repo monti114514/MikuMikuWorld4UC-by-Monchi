@@ -9,9 +9,9 @@
 #include "Utilities.h"
 #include "IconsFontAwesome5.h"
 #include "Colors.h"
-#include "IO.h"       // --- 追加 ---
-#include <filesystem> // --- 追加 ---
-#include <fstream>    // --- 追加 ---
+#include "IO.h"
+#include <filesystem>
+#include <fstream>
 
 namespace MikuMikuWorld
 {
@@ -36,16 +36,16 @@ Collapsed=0
 DockId=0x00000001,0
 
 [Window][###chart_properties]
-Pos=1057,580
-Size=264,429
+Pos=1317,580
+Size=303,429
 Collapsed=0
-DockId=0x0000000C,0
+DockId=0x0000000E,0
 
 [Window][###note_properties]
-Pos=1323,580
-Size=264,429
+Pos=1057,580
+Size=258,429
 Collapsed=0
-DockId=0x0000000D,0
+DockId=0x0000000B,0
 
 [Window][###options]
 Pos=1589,580
@@ -72,8 +72,8 @@ Collapsed=0
 DockId=0x0000000A,0
 
 [Window][InvisibleWindow]
-Pos=0,35
-Size=1920,974
+Pos=0,55
+Size=1920,954
 Collapsed=0
 
 [Window][Debug##Default]
@@ -103,33 +103,20 @@ Pos=735,414
 Size=450,200
 Collapsed=0
 
-[Window][Add Folder]
-ViewportPos=826,473
-ViewportId=0x52ADEEC5
-Size=268,100
-Collapsed=0
-
-[Window][Delete Chart]
-ViewportPos=573,435
-ViewportId=0xA0915BA2
-Size=362,118
-Collapsed=0
-
-[Window][Delete File]
-ViewportPos=769,414
-ViewportId=0x94B2CB3D
-Size=381,226
-Collapsed=0
-
 [Window][GalleryScreen]
 Pos=0,0
 Size=1920,1009
 Collapsed=0
 
-[Window][ファイルの削除]
-ViewportPos=752,422
-ViewportId=0x38D7DE83
-Size=396,194
+[Window][###quick_settings]
+Pos=1622,580
+Size=298,429
+Collapsed=0
+DockId=0x0000000D,0
+
+[Window][###serializer_picker]
+Pos=320,185
+Size=1280,659
 Collapsed=0
 
 [Table][0xD68DAD8B,2]
@@ -143,19 +130,22 @@ Column 0  Width=159
 Column 1  Weight=1.0000
 
 [Docking][Data]
-DockSpace           ID=0xF442860A Window=0xD8117908 Pos=0,58 Size=1920,974 Split=X
-  DockNode          ID=0x00000007 Parent=0xF442860A SizeRef=249,954 Split=Y Selected=0xCB59F716
-    DockNode        ID=0x00000009 Parent=0x00000007 SizeRef=249,555 Selected=0xCB59F716
-    DockNode        ID=0x0000000A Parent=0x00000007 SizeRef=249,397 Selected=0xEC13F1BA
-  DockNode          ID=0x00000008 Parent=0xF442860A SizeRef=1669,954 Split=X
-    DockNode        ID=0x00000001 Parent=0x00000008 SizeRef=804,765 CentralNode=1 Selected=0x7832EA6E
-    DockNode        ID=0x00000002 Parent=0x00000008 SizeRef=863,765 Split=Y
-      DockNode      ID=0x00000005 Parent=0x00000002 SizeRef=250,523 Selected=0x3A83CA69
-      DockNode      ID=0x00000006 Parent=0x00000002 SizeRef=250,429 Split=X Selected=0x25F8FF00
-        DockNode    ID=0x00000003 Parent=0x00000006 SizeRef=530,829 Split=X Selected=0x25F8FF00
-          DockNode  ID=0x0000000C Parent=0x00000003 SizeRef=264,429 Selected=0xD503FE8A
-          DockNode  ID=0x0000000D Parent=0x00000003 SizeRef=264,429 Selected=0x25F8FF00
-        DockNode    ID=0x00000004 Parent=0x00000006 SizeRef=331,829 Selected=0x0FDBD4A5
+DockSpace             ID=0xF442860A Window=0xD8117908 Pos=0,78 Size=1920,954 Split=X
+  DockNode            ID=0x00000007 Parent=0xF442860A SizeRef=249,954 Split=Y Selected=0xCB59F716
+    DockNode          ID=0x00000009 Parent=0x00000007 SizeRef=249,555 Selected=0xCB59F716
+    DockNode          ID=0x0000000A Parent=0x00000007 SizeRef=249,397 Selected=0xEC13F1BA
+  DockNode            ID=0x00000008 Parent=0xF442860A SizeRef=1669,954 Split=X
+    DockNode          ID=0x00000001 Parent=0x00000008 SizeRef=804,765 CentralNode=1 Selected=0x7832EA6E
+    DockNode          ID=0x00000002 Parent=0x00000008 SizeRef=863,765 Split=Y
+      DockNode        ID=0x00000005 Parent=0x00000002 SizeRef=250,523 Selected=0x3A83CA69
+      DockNode        ID=0x00000006 Parent=0x00000002 SizeRef=250,429 Split=X Selected=0x25F8FF00
+        DockNode      ID=0x00000003 Parent=0x00000006 SizeRef=530,829 Split=X Selected=0x25F8FF00
+          DockNode    ID=0x0000000C Parent=0x00000003 SizeRef=563,429 Split=X Selected=0xD503FE8A
+            DockNode  ID=0x0000000B Parent=0x0000000C SizeRef=258,429 Selected=0x25F8FF00
+            DockNode  ID=0x0000000E Parent=0x0000000C SizeRef=303,429 Selected=0xD503FE8A
+          DockNode    ID=0x0000000D Parent=0x00000003 SizeRef=298,429 Selected=0x46855A0D
+        DockNode      ID=0x00000004 Parent=0x00000006 SizeRef=331,829 Selected=0x0FDBD4A5
+
 )";
 				file.close();
 			}
