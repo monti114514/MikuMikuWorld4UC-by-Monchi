@@ -41,7 +41,7 @@
     <ClCompile Include="Tempo.cpp">
       <Filter>Score</Filter>
     </ClCompile>
-    <ClCompile Include="ScoreEditor.cpp">
+    <ClCompile Include="ScoreEditor\ScoreEditor.cpp">
       <Filter>ScoreEditor</Filter>
     </ClCompile>
     <ClCompile Include="Audio\AudioManager.cpp">
@@ -120,62 +120,62 @@
     <ClCompile Include="SusExporter.cpp">
       <Filter>Score\SUS</Filter>
     </ClCompile>
-    <ClCompile Include="ScoreEditorWindows.cpp">
-      <Filter>ScoreEditor</Filter>
+    <ClCompile Include="ScoreEditor\Windows\ScoreEditorWindows.cpp">
+      <Filter>ScoreEditor\Windows</Filter>
     </ClCompile>
-    <ClCompile Include="LayersWindow.cpp">
-      <Filter>ScoreEditor</Filter>
+    <ClCompile Include="ScoreEditor\Windows\LayersWindow.cpp">
+      <Filter>ScoreEditor\Windows</Filter>
     </ClCompile>
-    <ClCompile Include="PresetsWindow.cpp">
-      <Filter>ScoreEditor</Filter>
+    <ClCompile Include="ScoreEditor\Windows\PresetsWindow.cpp">
+      <Filter>ScoreEditor\Windows</Filter>
     </ClCompile>
-    <ClCompile Include="ScoreEditorDebugWindow.cpp">
-      <Filter>ScoreEditor</Filter>
+    <ClCompile Include="ScoreEditor\Windows\ScoreEditorDebugWindow.cpp">
+      <Filter>ScoreEditor\Windows</Filter>
     </ClCompile>
-    <ClCompile Include="ScoreEditorDialogs.cpp">
-      <Filter>ScoreEditor</Filter>
+    <ClCompile Include="ScoreEditor\Windows\ScoreEditorDialogs.cpp">
+      <Filter>ScoreEditor\Windows</Filter>
     </ClCompile>
-    <ClCompile Include="ScoreNotePropertiesWindow.cpp">
-      <Filter>ScoreEditor</Filter>
+    <ClCompile Include="ScoreEditor\Windows\ScoreNotePropertiesWindow.cpp">
+      <Filter>ScoreEditor\Windows</Filter>
     </ClCompile>
-    <ClCompile Include="ScorePropertiesWindow.cpp">
-      <Filter>ScoreEditor</Filter>
+    <ClCompile Include="ScoreEditor\Windows\ScorePropertiesWindow.cpp">
+      <Filter>ScoreEditor\Windows</Filter>
     </ClCompile>
-    <ClCompile Include="WaypointsWindow.cpp">
-      <Filter>ScoreEditor</Filter>
+    <ClCompile Include="ScoreEditor\Windows\WaypointsWindow.cpp">
+      <Filter>ScoreEditor\Windows</Filter>
     </ClCompile>
-    <ClCompile Include="ScoreEditorTimeline.cpp">
-      <Filter>ScoreEditor</Filter>
+    <ClCompile Include="ScoreEditor\Timeline\ScoreEditorTimeline.cpp">
+      <Filter>ScoreEditor\Timeline</Filter>
     </ClCompile>
-    <ClCompile Include="ScoreEditorTimelineAudio.cpp">
-      <Filter>ScoreEditor</Filter>
+    <ClCompile Include="ScoreEditor\Timeline\ScoreEditorTimelineAudio.cpp">
+      <Filter>ScoreEditor\Timeline</Filter>
     </ClCompile>
-    <ClCompile Include="ScoreEditorTimelineGeometry.cpp">
-      <Filter>ScoreEditor</Filter>
+    <ClCompile Include="ScoreEditor\Timeline\ScoreEditorTimelineGeometry.cpp">
+      <Filter>ScoreEditor\Timeline</Filter>
     </ClCompile>
-    <ClCompile Include="ScoreEditorTimelineMetaEvents.cpp">
-      <Filter>ScoreEditor</Filter>
+    <ClCompile Include="ScoreEditor\Timeline\ScoreEditorTimelineMetaEvents.cpp">
+      <Filter>ScoreEditor\Timeline</Filter>
     </ClCompile>
-    <ClCompile Include="ScoreEditorTimelinePlayback.cpp">
-      <Filter>ScoreEditor</Filter>
+    <ClCompile Include="ScoreEditor\Timeline\ScoreEditorTimelinePlayback.cpp">
+      <Filter>ScoreEditor\Timeline</Filter>
     </ClCompile>
-    <ClCompile Include="TimelineEventControls.cpp">
-      <Filter>ScoreEditor</Filter>
+    <ClCompile Include="ScoreEditor\Timeline\TimelineEventControls.cpp">
+      <Filter>ScoreEditor\Timeline</Filter>
     </ClCompile>
-    <ClCompile Include="ScoreContext.cpp">
-      <Filter>ScoreEditor</Filter>
+    <ClCompile Include="ScoreEditor\Context\ScoreContext.cpp">
+      <Filter>ScoreEditor\Context</Filter>
     </ClCompile>
-    <ClCompile Include="ScoreContextHistory.cpp">
-      <Filter>ScoreEditor</Filter>
+    <ClCompile Include="ScoreEditor\Context\ScoreContextHistory.cpp">
+      <Filter>ScoreEditor\Context</Filter>
     </ClCompile>
-    <ClCompile Include="ScoreContextMetaEvents.cpp">
-      <Filter>ScoreEditor</Filter>
+    <ClCompile Include="ScoreEditor\Context\ScoreContextMetaEvents.cpp">
+      <Filter>ScoreEditor\Context</Filter>
     </ClCompile>
-    <ClCompile Include="ScoreMetaEventUtils.cpp">
-      <Filter>ScoreEditor</Filter>
+    <ClCompile Include="ScoreEditor\Timeline\ScoreMetaEventUtils.cpp">
+      <Filter>ScoreEditor\Timeline</Filter>
     </ClCompile>
-    <ClCompile Include="HistoryManager.cpp">
-      <Filter>ScoreEditor</Filter>
+    <ClCompile Include="ScoreEditor\Context\HistoryManager.cpp">
+      <Filter>ScoreEditor\Context</Filter>
     </ClCompile>
     <ClCompile Include="JsonIO.cpp">
       <Filter>IO</Filter>
@@ -208,19 +208,37 @@
     <ClCompile Include="UscSerializer.cpp">
       <Filter>Score\Serialization</Filter>
     </ClCompile>
-    <ClCompile Include="PreviewData.cpp" />
-    <ClCompile Include="PreviewEngine.cpp" />
-    <ClCompile Include="ScorePreview.cpp" />
-    <ClCompile Include="ScorePreviewBackground.cpp" />
-    <ClCompile Include="ScorePreviewEffects.cpp" />
-    <ClCompile Include="ScorePreviewNotes.cpp" />
-    <ClCompile Include="ScorePreviewStage.cpp" />
-    <ClCompile Include="ScorePreviewUI.cpp" />
-    <ClCompile Include="MinMax.cpp" />
-    <ClCompile Include="Particle.cpp">
+    <ClCompile Include="ScorePreview\PreviewData.cpp">
+      <Filter>ScorePreview</Filter>
+    </ClCompile>
+    <ClCompile Include="ScorePreview\PreviewEngine.cpp">
+      <Filter>ScorePreview</Filter>
+    </ClCompile>
+    <ClCompile Include="ScorePreview\ScorePreview.cpp">
+      <Filter>ScorePreview</Filter>
+    </ClCompile>
+    <ClCompile Include="ScorePreview\ScorePreviewBackground.cpp">
+      <Filter>ScorePreview</Filter>
+    </ClCompile>
+    <ClCompile Include="ScorePreview\ScorePreviewEffects.cpp">
+      <Filter>ScorePreview</Filter>
+    </ClCompile>
+    <ClCompile Include="ScorePreview\ScorePreviewNotes.cpp">
+      <Filter>ScorePreview</Filter>
+    </ClCompile>
+    <ClCompile Include="ScorePreview\ScorePreviewStage.cpp">
+      <Filter>ScorePreview</Filter>
+    </ClCompile>
+    <ClCompile Include="ScorePreview\ScorePreviewUI.cpp">
+      <Filter>ScorePreview</Filter>
+    </ClCompile>
+    <ClCompile Include="ScorePreview\Effects\MinMax.cpp">
       <Filter>ScorePreview\Effects</Filter>
     </ClCompile>
-    <ClCompile Include="EffectView.cpp">
+    <ClCompile Include="ScorePreview\Effects\Particle.cpp">
+      <Filter>ScorePreview\Effects</Filter>
+    </ClCompile>
+    <ClCompile Include="ScorePreview\Effects\EffectView.cpp">
       <Filter>ScorePreview\Effects</Filter>
     </ClCompile>
     <ClCompile Include="AudioTrackUtils.cpp">
@@ -276,7 +294,7 @@
       <Filter>Score</Filter>
     </ClInclude>
     <ClInclude Include="Constants.h" />
-    <ClInclude Include="ScoreEditor.h">
+    <ClInclude Include="ScoreEditor\ScoreEditor.h">
       <Filter>ScoreEditor</Filter>
     </ClInclude>
     <ClInclude Include="Audio\AudioManager.h">
@@ -373,23 +391,23 @@
     <ClInclude Include="SusExporter.h">
       <Filter>Score\SUS</Filter>
     </ClInclude>
-    <ClInclude Include="ScoreEditorWindows.h">
-      <Filter>ScoreEditor</Filter>
+    <ClInclude Include="ScoreEditor\Windows\ScoreEditorWindows.h">
+      <Filter>ScoreEditor\Windows</Filter>
     </ClInclude>
-    <ClInclude Include="ScoreMetaEventUtils.h">
-      <Filter>ScoreEditor</Filter>
+    <ClInclude Include="ScoreEditor\Timeline\ScoreMetaEventUtils.h">
+      <Filter>ScoreEditor\Timeline</Filter>
     </ClInclude>
-    <ClInclude Include="ScoreContext.h">
-      <Filter>ScoreEditor</Filter>
+    <ClInclude Include="ScoreEditor\Context\ScoreContext.h">
+      <Filter>ScoreEditor\Context</Filter>
     </ClInclude>
-    <ClInclude Include="ScoreEditorTimeline.h">
-      <Filter>ScoreEditor</Filter>
+    <ClInclude Include="ScoreEditor\Timeline\ScoreEditorTimeline.h">
+      <Filter>ScoreEditor\Timeline</Filter>
     </ClInclude>
-    <ClInclude Include="TimelineEventControls.h">
-      <Filter>ScoreEditor</Filter>
+    <ClInclude Include="ScoreEditor\Timeline\TimelineEventControls.h">
+      <Filter>ScoreEditor\Timeline</Filter>
     </ClInclude>
-    <ClInclude Include="HistoryManager.h">
-      <Filter>ScoreEditor</Filter>
+    <ClInclude Include="ScoreEditor\Context\HistoryManager.h">
+      <Filter>ScoreEditor\Context</Filter>
     </ClInclude>
     <ClInclude Include="JsonIO.h">
       <Filter>IO</Filter>
@@ -400,8 +418,8 @@
     <ClInclude Include="Math.h">
       <Filter>Misc</Filter>
     </ClInclude>
-    <ClInclude Include="TimelineMode.h">
-      <Filter>ScoreEditor</Filter>
+    <ClInclude Include="ScoreEditor\Timeline\TimelineMode.h">
+      <Filter>ScoreEditor\Timeline</Filter>
     </ClInclude>
     <ClInclude Include="IO.h">
       <Filter>IO</Filter>
@@ -434,15 +452,25 @@
     <ClInclude Include="UscSerializer.h">
       <Filter>Score\Serialization</Filter>
     </ClInclude>
-    <ClInclude Include="PreviewData.h" />
-    <ClInclude Include="PreviewEngine.h" />
-    <ClInclude Include="ScorePreview.h" />
-    <ClInclude Include="ImageCrop.h" />
-    <ClInclude Include="MinMax.h" />
-    <ClInclude Include="Particle.h">
+    <ClInclude Include="ScorePreview\PreviewData.h">
+      <Filter>ScorePreview</Filter>
+    </ClInclude>
+    <ClInclude Include="ScorePreview\PreviewEngine.h">
+      <Filter>ScorePreview</Filter>
+    </ClInclude>
+    <ClInclude Include="ScorePreview\ScorePreview.h">
+      <Filter>ScorePreview</Filter>
+    </ClInclude>
+    <ClInclude Include="ScorePreview\ImageCrop.h">
+      <Filter>ScorePreview</Filter>
+    </ClInclude>
+    <ClInclude Include="ScorePreview\Effects\MinMax.h">
       <Filter>ScorePreview\Effects</Filter>
     </ClInclude>
-    <ClInclude Include="EffectView.h">
+    <ClInclude Include="ScorePreview\Effects\Particle.h">
+      <Filter>ScorePreview\Effects</Filter>
+    </ClInclude>
+    <ClInclude Include="ScorePreview\Effects\EffectView.h">
       <Filter>ScorePreview\Effects</Filter>
     </ClInclude>
     <ClInclude Include="ChartGalleryWindow.h" />
@@ -503,7 +531,15 @@
     <Filter Include="ScoreEditor">
       <UniqueIdentifier>{9b7e5692-fc35-4f4c-9b06-172b56eed59d}</UniqueIdentifier>
     </Filter>
-    <Filter Include="Score\Serialization">
+    <Filter Include="ScoreEditor\Context">
+      <UniqueIdentifier>{f3f9de68-9f5a-45b4-b4ac-6abf1f16ed33}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ScoreEditor\Timeline">
+      <UniqueIdentifier>{7c032dd2-34d2-4b1c-8715-0a42f8a04e11}</UniqueIdentifier>
+    </Filter>
+    <Filter Include="ScoreEditor\Windows">
+      <UniqueIdentifier>{8ec2b42f-38d2-408c-8eb2-3511db6e2c37}</UniqueIdentifier>
+    </Filter>    <Filter Include="Score\Serialization">
       <UniqueIdentifier>{30a99260-30fa-4a6e-a1a6-e51bb946a0e0}</UniqueIdentifier>
     </Filter>
     <Filter Include="ScorePreview">

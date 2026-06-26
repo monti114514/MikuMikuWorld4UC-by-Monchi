@@ -1,0 +1,1348 @@
+#include <corecrt_math.h>
+#define CPPHTTPLIB_OPENSSL_SUPPORT 1
+#include <cpp-httplib/httplib.h>
+
+#include "../Application.h"
+#include "../ApplicationConfiguration.h"
+#include "../Audio/Sound.h"
+#include "../AudioTrackUtils.h"
+#include "../Constants.h"
+#include "../File.h"
+#include "../IO.h"
+#include "../Rendering/Texture.h"
+#include "../SUS.h"
+#include "../NativeScoreSerializer.h"
+#include "../UI.h"
+#include "../Utilities.h"
+#include "PreviewEngine.h"
+#include <algorithm>
+#include <array>
+#include <cctype>
+#include <cmath>
+#include <iomanip>
+#include <Windows.h>
+#include <shobjidl.h>
+#include <filesystem>
+#include <fstream>
+
+using nlohmann::json;
+
+namespace MikuMikuWorld
+{
+	static MultiInputBinding* timelineModeBindings[] = {
+		&config.input.timelineSelect,   &config.input.timelineTap,
+		&config.input.timelineHold,     &config.input.timelineHoldMid,
+		&config.input.timelineFlick,    &config.input.timelineCritical,
+		&config.input.timelineFriction, &config.input.timelineGuide,
+		&config.input.timelineDamage,   &config.input.timelineDummy,
+		&config.input.timelineBpm,      &config.input.timelineTimeSignature,
+		&config.input.timelineHiSpeed,  nullptr,
+		nullptr,
+	};
+
+	constexpr const char* toolbarFlickNames[] = { "none", "default",   "left",      "right",
+		                                          "down", "down_left", "down_right" };
+
+	constexpr const char* toolbarStepNames[] = { "normal", "hidden", "skip" };
+
+	constexpr const char* UPDATE_API_HOST = "https://api.github.com";
+	constexpr const char* UPDATE_API_PATH = "/repos/monti114514/MikuMikuWorld4UC-by-Monchi/releases/latest";
+	constexpr bool INCLUDE_PRERELEASE_UPDATES = false;
+
+	void restoreScoreHistory(ScoreContext& context, bool undo)
+	{
+		if (undo ? !context.history.hasUndo() : !context.history.hasRedo())
+			return;
+
+		const Score previousScore = context.score;
+		if (undo)
+			context.undo();
+		else
+			context.redo();
+
+		if (AudioTrackUtils::hasAudioTrackData(previousScore) ||
+		    AudioTrackUtils::hasAudioTrackData(context.score))
+		{
+			Result result = AudioTrackUtils::refreshPlaybackAudio(context);
+			if (!result.isOk())
+				IO::messageBox(APP_NAME, result.getMessage(), IO::MessageBoxButtons::Ok,
+				               IO::MessageBoxIcon::Warning);
+		}
+	}
+
+	bool modeRequiresNotesTarget(TimelineMode mode)
+	{
+		switch (mode)
+		{
+		case TimelineMode::InsertTap:
+		case TimelineMode::InsertLong:
+		case TimelineMode::InsertLongMid:
+		case TimelineMode::InsertFlick:
+		case TimelineMode::MakeCritical:
+		case TimelineMode::MakeFriction:
+		case TimelineMode::InsertGuide:
+		case TimelineMode::InsertDamage:
+		case TimelineMode::MakeDummy:
+		case TimelineMode::InsertHiSpeed:
+			return true;
+		default:
+			return false;
+		}
+	}
+
+	struct ParsedVersion
+	{
+		std::array<int, 4> parts{};
+		bool prerelease{};
+		bool valid{};
+		std::string normalized;
+	};
+
+	std::string trimVersionTag(std::string tag)
+	{
+		tag.erase(tag.begin(),
+		          std::find_if(tag.begin(), tag.end(), [](unsigned char c)
+		          { return !std::isspace(c); }));
+		tag.erase(std::find_if(tag.rbegin(), tag.rend(), [](unsigned char c)
+		          { return !std::isspace(c); }).base(),
+		          tag.end());
+
+		return tag;
+	}
+
+	std::string formatVersion(const std::array<int, 4>& parts)
+	{
+		std::string version = IO::formatString("%d.%d.%d", parts[0], parts[1], parts[2]);
+		if (parts[3] != 0)
+			version += IO::formatString(".%d", parts[3]);
+
+		return version;
+	}
+
+	ParsedVersion parseVersionTag(std::string tag)
+	{
+		ParsedVersion version{};
+		tag = trimVersionTag(tag);
+
+		if (!tag.empty() && (tag[0] == 'v' || tag[0] == 'V'))
+			tag.erase(tag.begin());
+
+		const size_t metadataStart = tag.find('+');
+		if (metadataStart != std::string::npos)
+			tag.erase(metadataStart);
+
+		const size_t prereleaseStart = tag.find('-');
+		if (prereleaseStart != std::string::npos)
+		{
+			version.prerelease = true;
+			tag.erase(prereleaseStart);
+		}
+
+		auto split = Utilities::splitString(tag, '.');
+		if (split.size() != 3 && split.size() != 4)
+			return version;
+
+		for (size_t i = 0; i < split.size(); ++i)
+		{
+			const std::string& part = split[i];
+			if (part.empty() || !std::all_of(part.begin(), part.end(), [](unsigned char c)
+			    { return std::isdigit(c); }))
+				return version;
+
+			try
+			{
+				version.parts[i] = std::stoi(part);
+			}
+			catch (...)
+			{
+				return version;
+			}
+		}
+
+		version.valid = true;
+		version.normalized = formatVersion(version.parts);
+		return version;
+	}
+
+	bool isNewerVersion(const std::string& latestVersionString,
+	                    const std::string& currentVersionString,
+	                    bool includePrerelease = INCLUDE_PRERELEASE_UPDATES)
+	{
+		const ParsedVersion latestVersion = parseVersionTag(latestVersionString);
+		const ParsedVersion currentVersion = parseVersionTag(currentVersionString);
+		if (!latestVersion.valid || !currentVersion.valid)
+			return false;
+		if (latestVersion.prerelease && !includePrerelease)
+			return false;
+
+		for (size_t i = 0; i < latestVersion.parts.size(); ++i)
+		{
+			if (latestVersion.parts[i] > currentVersion.parts[i])
+				return true;
+
+			if (latestVersion.parts[i] < currentVersion.parts[i])
+				return false;
+		}
+
+		return false;
+	}
+
+	std::string getLowerExtension(const std::string& filename)
+	{
+		std::string extension = IO::File::getFileExtension(filename);
+		std::transform(extension.begin(), extension.end(), extension.begin(),
+		               [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+		return extension;
+	}
+
+	std::string replaceExtension(std::string filename, const char* extension)
+	{
+		const size_t slash = filename.find_last_of("\\/");
+		const size_t dot = filename.find_last_of('.');
+		if (dot != std::string::npos && (slash == std::string::npos || dot > slash))
+			filename.erase(dot);
+		filename += extension;
+		return filename;
+	}
+
+	const char* getNativeExtensionForFilter(uint32_t filterIndex)
+	{
+		switch (filterIndex)
+		{
+		case 1:
+			return UC_MMWS_EXTENSION;
+		case 2:
+			return CC_MMWS_EXTENSION;
+		case 3:
+			return MMWS_EXTENSION;
+		default:
+			return MCH_MMWS_EXTENSION;
+		}
+	}
+
+	std::string ensureNativeSaveExtension(const std::string& filename, uint32_t filterIndex)
+	{
+		const std::string extension = getLowerExtension(filename);
+		if (extension == MCH_MMWS_EXTENSION || extension == UC_MMWS_EXTENSION ||
+		    extension == CC_MMWS_EXTENSION || extension == MMWS_EXTENSION)
+			return filename;
+
+		return filename + getNativeExtensionForFilter(filterIndex);
+	}
+
+	NativeScoreFormat getNativeFormatForFilename(const std::string& filename)
+	{
+		return getLowerExtension(filename) == UC_MMWS_EXTENSION ? NativeScoreFormat::UntitledCharts
+		                                                        : NativeScoreFormat::Monchi;
+	}
+
+	IO::MessageBoxResult warnUntitledChartsDropsMonchiData(bool regularSave)
+	{
+		const std::string message =
+		    regularSave
+		        ? "This score contains Monchi-only editor data.\n"
+		          "The current save target is .unchmmws.\n"
+		          "Saving as .unchmmws will not preserve that Monchi-only data.\n\n"
+		          "Yes: save as .mchmmws instead\n"
+		          "No: save as .unchmmws anyway\n"
+		          "Cancel: cancel saving"
+		        : "This score contains Monchi-only editor data.\n"
+		          "Saving as UntitledCharts (.unchmmws) will not preserve that Monchi-only data.\n\n"
+		          "Yes: save as .mchmmws instead\n"
+		          "No: save as .unchmmws anyway\n"
+		          "Cancel: cancel saving";
+		return IO::messageBox(APP_NAME, message, IO::MessageBoxButtons::YesNoCancel,
+		                      IO::MessageBoxIcon::Warning,
+		                      Application::windowState.windowHandle);
+	}
+
+
+	ScoreEditor::ScoreEditor()
+	{
+		renderer = std::make_unique<Renderer>();
+
+		context.audio.initializeAudioEngine();
+		context.audio.setMasterVolume(config.masterVolume);
+		context.audio.setMusicVolume(config.bgmVolume);
+		context.audio.setSoundEffectsVolume(config.seVolume);
+		context.audio.loadSoundEffects();
+		context.audio.setSoundEffectsProfileIndex(config.seProfileIndex);
+		previewWindow.loadNoteEffects(context.scorePreviewDrawData.effectView);
+
+		timeline.setDivision(config.division);
+		timeline.setZoom(config.zoom);
+
+		autoSavePath = Application::getAppDir() + "auto_save";
+		autoSaveTimer.reset();
+
+		std::thread fetchUpdateThread(
+		    [this]
+		    {
+			    try
+			    {
+				    ScoreEditor::fetchUpdate();
+			    }
+			    catch (const std::exception& e)
+			    {
+				    std::cout << "Failed to fetch latest update: " << e.what() << std::endl;
+			    }
+		    });
+
+		fetchUpdateThread.detach();
+	}
+
+	void ScoreEditor::fetchUpdate()
+	{
+		httplib::Client client(UPDATE_API_HOST);
+
+		std::cout << "Fetching latest update information" << std::endl;
+
+		auto res = client.Get(UPDATE_API_PATH);
+		if (!res)
+		{
+			std::cerr << "Failed to fetch latest update: client.Get failed" << std::endl;
+			return;
+		}
+
+		std::cout << "Status: " << res->status << std::endl;
+
+		if (res->status != 200)
+		{
+			std::cerr << "Failed to fetch latest update: HTTP " << res->status << std::endl;
+			return;
+		}
+
+		ParsedVersion latestVersion;
+
+		try
+		{
+			auto parsed = nlohmann::json::parse(res->body);
+
+			if (!parsed.contains("tag_name") || !parsed["tag_name"].is_string())
+			{
+				std::cerr << "Failed to fetch latest update: tag_name not found" << std::endl;
+				return;
+			}
+
+			const bool isPrerelease =
+			    parsed.contains("prerelease") && parsed["prerelease"].is_boolean() &&
+			    parsed["prerelease"].get<bool>();
+			if (isPrerelease && !INCLUDE_PRERELEASE_UPDATES)
+			{
+				std::cout << "Latest release is a prerelease; skipping update notification"
+				          << std::endl;
+				return;
+			}
+
+			latestVersion = parseVersionTag(parsed["tag_name"].get<std::string>());
+			if (!latestVersion.valid)
+			{
+				std::cerr << "Failed to fetch latest update: invalid tag_name" << std::endl;
+				return;
+			}
+
+			if (latestVersion.prerelease && !INCLUDE_PRERELEASE_UPDATES)
+			{
+				std::cout << "Latest release tag is a prerelease; skipping update notification"
+				          << std::endl;
+				return;
+			}
+		}
+		catch (const std::exception& e)
+		{
+			std::cerr << "Failed to parse latest update response: " << e.what() << std::endl;
+			return;
+		}
+
+		const std::string currentVersionString = Application::getAppVersion();
+		const std::string latestVersionString = latestVersion.normalized;
+
+		std::cout << "Current version: " << currentVersionString << std::endl;
+		std::cout << "Latest version: " << latestVersionString << std::endl;
+
+		if (isNewerVersion(latestVersionString, currentVersionString))
+		{
+			std::cout << "Update available" << std::endl;
+			updateAvailableDialog.latestVersion = latestVersionString;
+			updateAvailableDialog.open = true;
+			return;
+		}
+
+		std::cout << "No update" << std::endl;
+	}
+
+	void ScoreEditor::writeSettings()
+	{
+		config.masterVolume = context.audio.getMasterVolume();
+		config.bgmVolume = context.audio.getMusicVolume();
+		config.seVolume = context.audio.getSoundEffectsVolume();
+
+		config.division = timeline.getDivision();
+		config.zoom = timeline.getZoom();
+	}
+
+	void ScoreEditor::uninitialize()
+	{
+		context.audio.uninitializeAudioEngine();
+		timeline.background.dispose();
+	}
+
+	void ScoreEditor::update()
+	{
+
+		galleryWindow.update(config.recentFiles);
+
+		if (galleryWindow.pendingCreateNew) {
+			Application::windowState.resetting = true;
+			galleryWindow.pendingCreateNew = false;
+		}
+
+		if (!galleryWindow.pendingLoadScore.empty()) {
+			loadScore(galleryWindow.pendingLoadScore);
+			galleryWindow.pendingLoadScore.clear();
+			galleryWindow.open = false;
+		}
+
+		if (galleryWindow.open) return;
+
+
+		drawMenubar();
+		drawToolbar();
+
+		if (!ImGui::GetIO().WantCaptureKeyboard)
+		{
+			if (ImGui::IsAnyPressed(config.input.create))
+				Application::windowState.resetting = true;
+			if (ImGui::IsAnyPressed(config.input.open))
+			{
+				Application::windowState.resetting = true;
+				Application::windowState.shouldPickScore = true;
+			}
+
+			if (ImGui::IsAnyPressed(config.input.openSettings))
+				settingsWindow.open = true;
+			if (ImGui::IsAnyPressed(config.input.openHelp))
+				help();
+			if (ImGui::IsAnyPressed(config.input.save))
+				trySave(context.workingData.filename);
+			if (ImGui::IsAnyPressed(config.input.saveAs))
+				saveAs();
+			if (ImGui::IsAnyPressed(config.input.exportScore))
+				exportScore();
+			if (ImGui::IsAnyPressed(config.input.togglePlayback))
+				timeline.setPlaying(context, !timeline.isPlaying());
+			if (ImGui::IsAnyPressed(config.input.stop))
+				timeline.stop(context);
+			if (ImGui::IsAnyPressed(config.input.previousTick, true))
+				timeline.previousTick(context);
+			if (ImGui::IsAnyPressed(config.input.nextTick, true))
+				timeline.nextTick(context);
+			if (ImGui::IsAnyPressed(config.input.selectAll))
+				context.selectAll();
+			if (ImGui::IsAnyPressed(config.input.deleteSelection))
+				context.deleteSelection();
+			if (ImGui::IsAnyPressed(config.input.cutSelection))
+				context.cutSelection();
+			if (ImGui::IsAnyPressed(config.input.copySelection))
+				context.copySelection();
+			if (ImGui::IsAnyPressed(config.input.paste))
+				context.paste(false);
+			if (ImGui::IsAnyPressed(config.input.flipPaste))
+				context.paste(true);
+			if (ImGui::IsAnyPressed(config.input.cancelPaste))
+				context.cancelPaste();
+			if (ImGui::IsAnyPressed(config.input.duplicate))
+				context.duplicateSelection(false);
+			if (ImGui::IsAnyPressed(config.input.flipDuplicate))
+				context.duplicateSelection(true);
+			if (ImGui::IsAnyPressed(config.input.flip))
+				context.flipSelection();
+			if (ImGui::IsAnyPressed(config.input.undo))
+				restoreScoreHistory(context, true);
+			if (ImGui::IsAnyPressed(config.input.redo))
+				restoreScoreHistory(context, false);
+			if (ImGui::IsAnyPressed(config.input.zoomOut, true))
+				timeline.setZoom(timeline.getZoom() - 0.25f);
+			if (ImGui::IsAnyPressed(config.input.zoomIn, true))
+				timeline.setZoom(timeline.getZoom() + 0.25f);
+			if (ImGui::IsAnyPressed(config.input.decreaseNoteSize, true))
+				edit.noteWidth = std::clamp(edit.noteWidth - 1, MIN_NOTE_WIDTH, MAX_NOTE_WIDTH);
+			if (ImGui::IsAnyPressed(config.input.increaseNoteSize, true))
+				edit.noteWidth = std::clamp(edit.noteWidth + 1, MIN_NOTE_WIDTH, MAX_NOTE_WIDTH);
+			if (ImGui::IsAnyPressed(config.input.shrinkDown))
+				context.shrinkSelection(Direction::Down);
+			if (ImGui::IsAnyPressed(config.input.shrinkUp))
+				context.shrinkSelection(Direction::Up);
+			if (ImGui::IsAnyPressed(config.input.compressSelection))
+				context.compressSelection();
+			if (ImGui::IsAnyPressed(config.input.connectHolds))
+				context.connectHoldsInSelection();
+			if (ImGui::IsAnyPressed(config.input.splitHold))
+				context.splitHoldInSelection();
+			if (ImGui::IsAnyPressed(config.input.lerpHiSpeeds))
+				context.lerpHiSpeeds(timeline.getDivision(), EaseType::Linear);
+
+			for (int i = 0; i < (int)TimelineMode::TimelineModeMax; ++i)
+				if (timelineModeBindings[i] && ImGui::IsAnyPressed(*timelineModeBindings[i]))
+				{
+					if (modeRequiresNotesTarget((TimelineMode)i))
+					{
+						context.timelineEditTarget = TimelineEditTarget::Notes;
+						context.selectedAudioClip = static_cast<id_t>(-1);
+					}
+					timeline.changeMode((TimelineMode)i, edit);
+				}
+		}
+
+		timeline.laneWidth = config.timelineWidth;
+		timeline.notesHeight =
+		    config.matchNotesSizeToTimeline ? config.timelineWidth : config.notesHeight;
+
+		if (config.backgroundBrightness != timeline.background.getBrightness())
+			timeline.background.setBrightness(config.backgroundBrightness);
+
+		if (settingsWindow.isBackgroundChangePending)
+		{
+			static const std::string defaultBackgroundPath =
+			    Application::getAppDir() + "res\\textures\\default.png";
+			timeline.background.load(config.backgroundImage.empty() ? defaultBackgroundPath
+			                                                        : config.backgroundImage);
+			settingsWindow.isBackgroundChangePending = false;
+		}
+
+		if (config.seProfileIndex != context.audio.getSoundEffectsProfileIndex())
+		{
+			context.audio.stopSoundEffects(false);
+			context.audio.setSoundEffectsProfileIndex(config.seProfileIndex);
+		}
+
+		if (propertiesWindow.isPendingLoadMusic)
+		{
+			loadMusic(propertiesWindow.pendingLoadMusicFilename);
+			propertiesWindow.pendingLoadMusicFilename.clear();
+			propertiesWindow.isPendingLoadMusic = false;
+		}
+
+		if (config.autoSaveEnabled && autoSaveTimer.elapsedMinutes() >= config.autoSaveInterval)
+		{
+			autoSave();
+			autoSaveTimer.reset();
+		}
+
+		if (recentFileNotFoundDialog.update() == DialogResult::Yes)
+		{
+			if (isArrayIndexInBounds(recentFileNotFoundDialog.removeIndex, config.recentFiles))
+				config.recentFiles.erase(config.recentFiles.begin() +
+				                         recentFileNotFoundDialog.removeIndex);
+		}
+
+		settingsWindow.update(context);
+		aboutDialog.update();
+		updateAvailableDialog.update();
+		serializeWindow.update(*this, context, timeline);
+
+		ImGui::Begin(IMGUI_TITLE(ICON_FA_MUSIC, "notes_timeline"), NULL,
+		             ImGuiWindowFlags_Static | ImGuiWindowFlags_NoScrollbar |
+		                 ImGuiWindowFlags_NoScrollWithMouse);
+		timeline.update(context, edit, renderer.get());
+		ImGui::End();
+
+		if (ImGui::Begin(IMGUI_TITLE(ICON_FA_DESKTOP, "score_preview"), NULL,
+		                 ImGuiWindowFlags_Static | ImGuiWindowFlags_NoScrollbar |
+		                 ImGuiWindowFlags_NoScrollWithMouse))
+		{
+			previewWindow.update(context, renderer.get());
+			previewWindow.updateUI(timeline, context);
+		}
+		ImGui::End();
+
+		if (config.debugEnabled)
+		{
+			debugWindow.update(context, timeline);
+		}
+
+		if (ImGui::Begin(IMGUI_TITLE(ICON_FA_ALIGN_LEFT, "chart_properties"), NULL,
+		                 ImGuiWindowFlags_Static))
+		{
+			propertiesWindow.update(context);
+		}
+		ImGui::End();
+
+		if (ImGui::Begin(IMGUI_TITLE(ICON_FA_WRENCH, "note_properties"), NULL,
+		                 ImGuiWindowFlags_Static))
+		{
+			notePropertiesWindow.update(context, timeline.getDivision());
+		}
+		ImGui::End();
+
+		if (ImGui::Begin(IMGUI_TITLE(ICON_FA_WRENCH, "quick_settings"), NULL, ImGuiWindowFlags_Static))
+		{
+			optionsWindow.update(context, edit, timeline.getMode(),
+			                     settingsWindow.isBackgroundChangePending);
+		}
+		ImGui::End();
+
+		if (ImGui::Begin(IMGUI_TITLE(ICON_FA_DRAFTING_COMPASS, "presets"), NULL,
+		                 ImGuiWindowFlags_Static))
+		{
+			presetsWindow.update(context, presetManager);
+		}
+		ImGui::End();
+
+		if (ImGui::Begin(IMGUI_TITLE(ICON_FA_LAYER_GROUP, "layers"), NULL, ImGuiWindowFlags_Static))
+		{
+			layersWindow.update(context);
+		}
+		ImGui::End();
+
+		if (ImGui::Begin(IMGUI_TITLE(ICON_FA_LOCATION_ARROW, "waypoints"), NULL,
+		                 ImGuiWindowFlags_Static))
+		{
+			waypointsWindow.update(context);
+		}
+		ImGui::End();
+
+		#ifdef DEBUG
+			if (showImGuiDemoWindow)
+				ImGui::ShowDemoWindow(&showImGuiDemoWindow);
+		#endif
+	}
+
+	size_t ScoreEditor::updateRecentFilesList(const std::string& entry)
+	{
+		std::string normalizedEntry = entry;
+		std::replace(normalizedEntry.begin(), normalizedEntry.end(), '\\', '/');
+		std::transform(normalizedEntry.begin(), normalizedEntry.end(), normalizedEntry.begin(),
+		               [](unsigned char c) { return static_cast<char>(std::tolower(c)); });
+
+		const size_t filenamePos = normalizedEntry.find_last_of('/');
+		const std::string filename =
+		    filenamePos == std::string::npos ? normalizedEntry : normalizedEntry.substr(filenamePos + 1);
+
+		if (normalizedEntry.find("/auto_save/") != std::string::npos ||
+		    filename.rfind("auto_save_", 0) == 0)
+		{
+			return config.recentFiles.size();
+		}
+
+		// Remove the entry if it already exists.
+		auto it = std::find(config.recentFiles.begin(), config.recentFiles.end(), entry);
+		if (it != config.recentFiles.end())
+			config.recentFiles.erase(it);
+
+		config.recentFiles.insert(config.recentFiles.begin(), entry);
+
+		while (config.recentFiles.size() > maxRecentFilesEntries)
+			config.recentFiles.pop_back();
+
+		return config.recentFiles.size();
+	}
+
+	void ScoreEditor::create()
+	{
+		timeline.setPlaying(context, false);
+
+		context.score = {};
+		context.selectedLayer = 0;
+		context.workingData = {};
+		context.history.clear();
+		context.scoreStats.reset();
+		context.audio.disposeMusic();
+		context.waveformL.clear();
+		context.waveformR.clear();
+		context.sourceWaveformL.clear();
+		context.sourceWaveformR.clear();
+		context.clearSelection();
+		context.upToDate = true;  // New score; nothing to save
+
+		UI::setWindowTitle(windowUntitled);
+	}
+
+	void ScoreEditor::loadScore(std::string filename)
+	{
+		if (!IO::File::exists(filename))
+			return;
+
+		timeline.setPlaying(context, false);
+		serializeWindow.deserialize(filename);
+		updateRecentFilesList(filename);
+	}
+
+	void ScoreEditor::loadMusic(std::string filename)
+	{
+		const bool changingSource = filename != context.workingData.musicFilename;
+		Result result = context.audio.loadMusic(filename);
+		if (result.isOk() || filename.empty())
+		{
+			if (changingSource)
+			{
+				context.score.audioTrack = AudioTrack{};
+				context.workingData.musicOffset = 0.0f;
+				context.score.metadata.musicOffset = 0.0f;
+			}
+			context.workingData.musicFilename = filename;
+		}
+		else
+		{
+			std::string errorMessage = IO::formatString(
+			    "%s\n%s: %s\n%s: %s", getString("error_load_music_file"), getString("music_file"),
+			    filename.c_str(), getString("error"), result.getMessage().c_str());
+
+			IO::messageBox(APP_NAME, errorMessage, IO::MessageBoxButtons::Ok,
+			               IO::MessageBoxIcon::Error);
+		}
+
+		context.sourceWaveformL.generateMipChainsFromSampleBuffer(context.audio.musicBuffer, 0);
+		context.sourceWaveformR.generateMipChainsFromSampleBuffer(context.audio.musicBuffer, 1);
+
+		const float sourceLengthMs =
+		    context.audio.musicBuffer.isValid()
+		        ? (static_cast<float>(context.audio.musicBuffer.frameCount) /
+		           context.audio.musicBuffer.sampleRate) *
+		              1000.0f
+		        : 0.0f;
+		AudioTrackUtils::ensureDefaultAudioTrack(context.score, filename,
+		                                         context.workingData.musicOffset, sourceLengthMs);
+
+		Result refreshResult = AudioTrackUtils::refreshPlaybackAudio(context);
+		if (!refreshResult.isOk())
+			IO::messageBox(APP_NAME, refreshResult.getMessage(), IO::MessageBoxButtons::Ok,
+			               IO::MessageBoxIcon::Warning);
+		timeline.setPlaying(context, false);
+	}
+
+	void ScoreEditor::open()
+	{
+		IO::FileDialog fileDialog{};
+		fileDialog.parentWindowHandle = Application::windowState.windowHandle;
+		fileDialog.title = "Open Score File";
+		fileDialog.filters = { IO::combineFilters("All Supported Files",
+			                                      { IO::mmwsFilter, IO::susFilter, IO::uscFilter,
+			                                        IO::lvlDatFilter }),
+			                   IO::mmwsFilter,
+			                   IO::susFilter,
+			                   IO::uscFilter,
+			                   IO::lvlDatFilter,
+			                   IO::allFilter };
+
+		if (fileDialog.openFile() == IO::FileDialogResult::OK)
+			loadScore(fileDialog.outputFilename);
+	}
+
+	bool ScoreEditor::trySave(std::string filename)
+	{
+		if (filename.empty())
+			return saveAs();
+		else
+			return save(filename);
+
+		return false;
+	}
+
+	bool ScoreEditor::save(std::string filename)
+	{
+		try
+		{
+			std::string extension = getLowerExtension(filename);
+			if (extension != MCH_MMWS_EXTENSION && extension != UC_MMWS_EXTENSION)
+			{
+				filename = replaceExtension(filename, MCH_MMWS_EXTENSION);
+				extension = MCH_MMWS_EXTENSION;
+				context.workingData.filename = filename;
+			}
+
+			if (extension == UC_MMWS_EXTENSION &&
+			    NativeScoreSerializer::hasMonchiNativeOnlyData(context.score))
+			{
+				IO::MessageBoxResult result = warnUntitledChartsDropsMonchiData(true);
+				if (result == IO::MessageBoxResult::Cancel)
+					return false;
+				if (result == IO::MessageBoxResult::Yes)
+				{
+					filename = replaceExtension(filename, MCH_MMWS_EXTENSION);
+					extension = MCH_MMWS_EXTENSION;
+					context.workingData.filename = filename;
+				}
+			}
+
+			context.score.metadata = context.workingData.toScoreMetadata();
+			NativeScoreSerializer(getNativeFormatForFilename(filename)).serialize(context.score,
+			                                                                      filename);
+
+			UI::setWindowTitle(IO::File::getFilename(filename));
+			context.upToDate = true;
+		}
+		catch (const std::exception& err)
+		{
+			IO::messageBox(APP_NAME,
+			               IO::formatString("%s\n%s: %s", getString("error_save_score_file"),
+			                                getString("error"), err.what()),
+			               IO::MessageBoxButtons::Ok, IO::MessageBoxIcon::Error);
+			return false;
+		}
+
+		return true;
+	}
+
+	bool ScoreEditor::saveAs()
+	{
+		IO::FileDialog fileDialog{};
+		fileDialog.title = "Save Chart";
+		fileDialog.filters = { IO::mchMmwsFilter, IO::ucMmwsFilter };
+		fileDialog.filterIndex =
+		    getLowerExtension(context.workingData.filename) == UC_MMWS_EXTENSION ? 1 : 0;
+		fileDialog.parentWindowHandle = Application::windowState.windowHandle;
+		fileDialog.inputFilename =
+		    IO::File::getFilenameWithoutExtension(context.workingData.filename);
+
+		if (fileDialog.saveFile() == IO::FileDialogResult::OK)
+		{
+			context.workingData.filename =
+			    ensureNativeSaveExtension(fileDialog.outputFilename, fileDialog.filterIndex);
+			bool saved = save(context.workingData.filename);
+			if (saved)
+				updateRecentFilesList(context.workingData.filename);
+
+			return saved;
+		}
+
+		return false;
+	}
+
+	void ScoreEditor::exportScore()
+	{
+		SerializeFormat format = static_cast<SerializeFormat>(config.defaultExportFormat);
+		if (ScoreSerializeController::isValidFormat(format))
+		{
+			IO::FileDialog fileDialog{};
+			fileDialog.title = "Export Chart";
+			fileDialog.filters = { ScoreSerializeController::getFormatFilter(format) };
+			fileDialog.defaultExtension =
+			    ScoreSerializeController::getFormatDefaultExtension(format);
+			fileDialog.parentWindowHandle = Application::windowState.windowHandle;
+
+			if (fileDialog.saveFile() == IO::FileDialogResult::OK)
+				serializeWindow.serialize(context, fileDialog.outputFilename);
+		}
+		else
+		{
+			serializeWindow.serialize(context);
+		}
+	}
+
+	void ScoreEditor::drawMenubar()
+	{
+		ImGui::BeginMainMenuBar();
+		ImGui::PushStyleVar(ImGuiStyleVar_ItemSpacing, ImVec2(10, 2));
+
+		if (ImGui::BeginMenu(getString("file")))
+		{
+			if (ImGui::MenuItem(getString("new"), ToShortcutString(config.input.create)))
+				Application::windowState.resetting = true;
+
+			if (ImGui::MenuItem(getString("open"), ToShortcutString(config.input.open)))
+			{
+				Application::windowState.resetting = true;
+				Application::windowState.shouldPickScore = true;
+			}
+			if (ImGui::MenuItem(getString("file_open_gallery")))
+			{
+				galleryWindow.open = true;
+			}
+			if (ImGui::BeginMenu(getString("open_recent")))
+			{
+				for (size_t index = 0; index < config.recentFiles.size(); index++)
+				{
+					const std::string& entry = config.recentFiles[index];
+					if (ImGui::MenuItem(entry.c_str()))
+					{
+						if (IO::File::exists(entry))
+						{
+							Application::windowState.resetting = true;
+							Application::pendingLoadScoreFile = entry;
+						}
+						else
+						{
+							recentFileNotFoundDialog.removeFilename = entry;
+							recentFileNotFoundDialog.removeIndex = index;
+							recentFileNotFoundDialog.open = true;
+						}
+					}
+				}
+
+				ImGui::Separator();
+				if (ImGui::MenuItem(getString("clear"), nullptr, false,
+				                    !config.recentFiles.empty()))
+					config.recentFiles.clear();
+
+				ImGui::EndMenu();
+			}
+
+			ImGui::Separator();
+			if (ImGui::MenuItem(getString("save"), ToShortcutString(config.input.save)))
+				trySave(context.workingData.filename);
+
+			if (ImGui::MenuItem(getString("save_as"), ToShortcutString(config.input.saveAs)))
+				saveAs();
+
+			if (ImGui::MenuItem(getString("export_score"),
+			                    ToShortcutString(config.input.exportScore)))
+				exportScore();
+
+			ImGui::Separator();
+			if (ImGui::MenuItem(getString("exit"),
+			                    ToShortcutString(ImGuiKey_F4, ImGuiModFlags_Alt)))
+				Application::windowState.closing = true;
+
+			ImGui::EndMenu();
+		}
+
+		if (ImGui::BeginMenu(getString("edit")))
+		{
+			if (ImGui::MenuItem(getString("undo"), ToShortcutString(config.input.undo), false,
+			                    context.history.hasUndo()))
+				restoreScoreHistory(context, true);
+
+			if (ImGui::MenuItem(getString("redo"), ToShortcutString(config.input.redo), false,
+			                    context.history.hasRedo()))
+				restoreScoreHistory(context, false);
+
+			ImGui::Separator();
+			if (ImGui::MenuItem(getString("delete"), ToShortcutString(config.input.deleteSelection),
+			                    false, context.hasSelection()))
+				context.deleteSelection();
+
+			if (ImGui::MenuItem(getString("cut"), ToShortcutString(config.input.cutSelection),
+			                    false, context.hasSelection()))
+				context.cutSelection();
+
+			if (ImGui::MenuItem(getString("copy"), ToShortcutString(config.input.copySelection),
+			                    false, context.hasSelection()))
+				context.copySelection();
+
+			if (ImGui::MenuItem(getString("paste"), ToShortcutString(config.input.paste)))
+				context.paste(false);
+
+			if (ImGui::MenuItem(getString("duplicate"), ToShortcutString(config.input.duplicate),
+			                    false, context.hasSelection()))
+				context.duplicateSelection(false);
+
+			ImGui::Separator();
+			if (ImGui::MenuItem(getString("select_all"), ToShortcutString(config.input.selectAll)))
+				context.selectAll();
+
+			ImGui::Separator();
+			if (ImGui::MenuItem(getString("settings"), ToShortcutString(config.input.openSettings)))
+				settingsWindow.open = true;
+
+			ImGui::EndMenu();
+		}
+
+		if (ImGui::BeginMenu(getString("view")))
+		{
+			ImGui::MenuItem(getString("show_step_outlines"), NULL, &timeline.drawHoldStepOutlines);
+			ImGui::MenuItem(getString("cursor_auto_scroll"), NULL, &config.followCursorInPlayback);
+			ImGui::MenuItem(getString("return_to_last_tick"), NULL,
+			                &config.returnToLastSelectedTickOnPause);
+			ImGui::MenuItem(getString("draw_waveform"), NULL, &config.drawWaveform);
+
+			ImGui::EndMenu();
+		}
+
+		if (ImGui::BeginMenu(getString("tools")))
+		{
+
+			if (ImGui::MenuItem(getString("tools_straighten_3d")))
+			{
+				straightenHold3D();
+			}
+			
+			ImGui::EndMenu();
+		}
+
+		if (config.debugEnabled)
+		{
+			if (ImGui::BeginMenu(getString("debug")))
+			{
+#ifdef DEBUG
+				ImGui::MenuItem("ImGui Demo Window", NULL, &showImGuiDemoWindow);
+#endif
+
+				if (ImGui::MenuItem("Auto Save"))
+					autoSave();
+
+				if (ImGui::MenuItem("Delete Old Auto Save (1)"))
+					deleteOldAutoSave(1);
+
+				if (ImGui::MenuItem("Delete Old Auto Save (Max)"))
+					deleteOldAutoSave(config.autoSaveMaxCount);
+
+				bool audioRunning = context.audio.isEngineStarted();
+				if (ImGui::MenuItem(audioRunning ? "Stop Audio" : "Start Audio",
+				                    audioRunning ? ICON_FA_VOLUME_UP : ICON_FA_VOLUME_MUTE))
+				{
+					if (audioRunning)
+						context.audio.stopEngine();
+					else
+						context.audio.startEngine();
+				}
+
+				ImGui::EndMenu();
+			}
+		}
+
+		if (ImGui::BeginMenu(getString("window")))
+		{
+			if (ImGui::MenuItem(getString("vsync"), NULL, &config.vsync))
+				glfwSwapInterval(config.vsync);
+
+			ImGui::MenuItem(getString("show_fps"), NULL, &config.showFPS);
+
+			ImGui::EndMenu();
+		}
+
+		if (ImGui::BeginMenu(getString("help")))
+		{
+			if (ImGui::MenuItem(getString("help"), ToShortcutString(config.input.openHelp)))
+				help();
+
+			if (ImGui::MenuItem(getString("about")))
+				aboutDialog.open = true;
+
+			ImGui::EndMenu();
+		}
+
+		if (config.showFPS)
+		{
+			std::string fps = IO::formatString("%.3fms (%.1fFPS)", ImGui::GetIO().DeltaTime * 1000,
+			                                   ImGui::GetIO().Framerate);
+			ImGui::SetCursorPosX(ImGui::GetWindowSize().x - ImGui::CalcTextSize(fps.c_str()).x -
+			                     ImGui::GetStyle().WindowPadding.x);
+			ImGui::Text(fps.c_str());
+		}
+
+		ImGui::PopStyleVar();
+		ImGui::EndMainMenuBar();
+	}
+
+	void ScoreEditor::drawToolbar()
+	{
+		ImGuiViewport* viewport = ImGui::GetMainViewport();
+		ImVec2 toolbarSize{ viewport->WorkSize.x,
+			                UI::toolbarBtnSize.y + ImGui::GetStyle().WindowPadding.y + 5 };
+
+		// keep toolbar on top in main viewport
+		ImGui::SetNextWindowViewport(viewport->ID);
+		ImGui::SetNextWindowPos(viewport->WorkPos);
+		ImGui::SetNextWindowSize(toolbarSize, ImGuiCond_Always);
+
+		// toolbar style
+		ImGui::PushStyleColor(ImGuiCol_Button, ImVec4{ 0.0f, 0.0f, 0.0f, 0.0f });
+		ImGui::PushStyleColor(ImGuiCol_Separator, ImGui::GetStyleColorVec4(ImGuiCol_WindowBg));
+		ImGui::PushStyleColor(ImGuiCol_WindowBg, ImGui::GetStyleColorVec4(ImGuiCol_MenuBarBg));
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowRounding, 0.0f);
+		ImGui::PushStyleVar(ImGuiStyleVar_WindowBorderSize, 0.0f);
+		ImGui::Begin("##app_toolbar", NULL, ImGuiWindowFlags_Toolbar);
+
+		if (UI::toolbarButton(ICON_FA_FILE, getString("new"),
+		                      ToShortcutString(config.input.create)))
+		{
+			Application::windowState.resetting = true;
+		}
+
+		if (UI::toolbarButton(ICON_FA_FOLDER_OPEN, getString("open"),
+		                      ToShortcutString(config.input.open)))
+		{
+			Application::windowState.resetting = true;
+			Application::windowState.shouldPickScore = true;
+		}
+
+		if (UI::toolbarButton(ICON_FA_SAVE, getString("save"), ToShortcutString(config.input.save)))
+			trySave(context.workingData.filename);
+
+		if (UI::toolbarButton(ICON_FA_FILE_EXPORT, getString("export_score"),
+		                      ToShortcutString(config.input.exportScore)))
+			exportScore();
+
+		UI::toolbarSeparator();
+
+		if (UI::toolbarButton(ICON_FA_CUT, getString("cut"),
+		                      ToShortcutString(config.input.cutSelection),
+		                      context.selectedNotes.size() > 0))
+			context.cutSelection();
+
+		if (UI::toolbarButton(ICON_FA_COPY, getString("copy"),
+		                      ToShortcutString(config.input.copySelection),
+		                      context.selectedNotes.size() > 0))
+			context.copySelection();
+
+		if (UI::toolbarButton(ICON_FA_PASTE, getString("paste"),
+		                      ToShortcutString(config.input.paste)))
+			context.paste(false);
+
+		if (UI::toolbarButton(ICON_FA_CLONE, getString("duplicate"),
+		                      ToShortcutString(config.input.duplicate),
+		                      context.selectedNotes.size() > 0))
+			context.duplicateSelection(false);
+
+		UI::toolbarSeparator();
+
+		if (UI::toolbarButton(ICON_FA_UNDO, getString("undo"), ToShortcutString(config.input.undo),
+		                      context.history.hasUndo()))
+			restoreScoreHistory(context, true);
+
+		if (UI::toolbarButton(ICON_FA_REDO, getString("redo"), ToShortcutString(config.input.redo),
+		                      context.history.hasRedo()))
+			restoreScoreHistory(context, false);
+
+		UI::toolbarSeparator();
+
+		if (UI::toolbarButton(timeline.isPlaying() ? ICON_FA_PAUSE : ICON_FA_PLAY,
+		                      getString("toggle_playback"),
+		                      ToShortcutString(config.input.togglePlayback)))
+			timeline.setPlaying(context, !timeline.isPlaying());
+
+		if (UI::toolbarButton(ICON_FA_STOP, getString("stop"), ToShortcutString(config.input.stop)))
+			timeline.stop(context);
+
+		if (UI::toolbarButton(ICON_FA_BACKWARD, getString("previous_tick"), "",
+		                      context.currentTick > 0 && !timeline.isPlaying()))
+			timeline.previousTick(context);
+
+		if (UI::toolbarButton(ICON_FA_FORWARD, getString("next_tick"), "",
+		                      !timeline.isPlaying()))
+			timeline.nextTick(context);
+
+		ImGui::SameLine();
+		if (UI::transparentButton(ICON_FA_MINUS, UI::toolbarBtnSize, false,
+		                          timeline.getPlaybackSpeed() > 0.25f))
+			timeline.setPlaybackSpeed(context, timeline.getPlaybackSpeed() - 0.25f);
+
+		ImGui::SameLine();
+		const float toolbarPlaybackSpeed = timeline.getPlaybackSpeed();
+		const std::string playbackSpeedText =
+		    std::abs(toolbarPlaybackSpeed - std::round(toolbarPlaybackSpeed)) < 0.001f
+		        ? IO::formatString("%.1f", toolbarPlaybackSpeed)
+		        : IO::formatString("%.2f", toolbarPlaybackSpeed);
+		UI::toolbarLabel(IO::formatString("%sx%s", ICON_FA_PLAY,
+		                                  playbackSpeedText.c_str())
+		                     .c_str(),
+		                 ImVec2(ImGui::CalcTextSize(ICON_FA_PLAY "x0.25").x + 8.0f,
+		                        UI::toolbarBtnSize.y));
+
+		ImGui::SameLine();
+		if (UI::transparentButton(ICON_FA_PLUS, UI::toolbarBtnSize, false,
+		                          timeline.getPlaybackSpeed() < 1.0f))
+			timeline.setPlaybackSpeed(context, timeline.getPlaybackSpeed() + 0.25f);
+
+		UI::toolbarSeparator();
+
+		for (int i = 0; i < arrayLength(timelineModes); ++i)
+		{
+			std::string img{ IO::concat("timeline", timelineModes[i], "_") };
+			if (i == (int)TimelineMode::InsertFlick)
+				img.append("_").append(toolbarFlickNames[(int)edit.flickType]);
+			else if (i == (int)TimelineMode::InsertLongMid)
+				img.append("_").append(toolbarStepNames[(int)edit.stepType]);
+			else if (i == (int)TimelineMode::InsertGuide)
+			{
+				img.append("_").append(guideColors[(int)edit.colorType]);
+				img.append("_").append(
+				    std::string(fadeTypes[(int)edit.fadeType]).substr(5).c_str());
+			}
+
+			const char* shortcut =
+			    timelineModeBindings[i] ? ToShortcutString(*timelineModeBindings[i]) : "";
+			if (UI::toolbarImageButton(img.c_str(), getString(timelineModes[i]),
+			                           shortcut, true,
+			                           (int)timeline.getMode() == i))
+			{
+				if (modeRequiresNotesTarget((TimelineMode)i))
+				{
+					context.timelineEditTarget = TimelineEditTarget::Notes;
+					context.selectedAudioClip = static_cast<id_t>(-1);
+				}
+				timeline.changeMode((TimelineMode)i, edit);
+			}
+		}
+
+		ImGui::PopStyleColor(3);
+		ImGui::PopStyleVar(2);
+		ImGui::End();
+	}
+
+	void ScoreEditor::help()
+	{
+		ShellExecuteW(0, 0, L"https://sekai-guide.tootiejin.com/getting-started/usage-guide-mmw4cc", 0, 0, SW_SHOW);
+	}
+
+	void ScoreEditor::autoSave()
+	{
+		std::wstring wAutoSaveDir = IO::mbToWideStr(autoSavePath);
+
+		// create auto save directory if none exists
+		if (!std::filesystem::exists(wAutoSaveDir))
+			std::filesystem::create_directory(wAutoSaveDir);
+
+		context.score.metadata = context.workingData.toScoreMetadata();
+		NativeScoreSerializer().serialize(context.score, autoSavePath + "\\auto_save_" +
+		                                                     Utilities::getCurrentDateTime() +
+		                                                     MCH_MMWS_EXTENSION);
+
+		// get mmws files
+		int mmwsCount = 0;
+		for (const auto& file : std::filesystem::directory_iterator(wAutoSaveDir))
+		{
+			std::string extension = file.path().extension().string();
+			std::transform(extension.begin(), extension.end(), extension.begin(), ::tolower);
+			mmwsCount += extension == MCH_MMWS_EXTENSION || extension == UC_MMWS_EXTENSION;
+		}
+
+		// delete older files
+		if (mmwsCount > config.autoSaveMaxCount)
+			deleteOldAutoSave(mmwsCount - config.autoSaveMaxCount);
+	}
+
+	int ScoreEditor::deleteOldAutoSave(int count)
+	{
+		std::wstring wAutoSaveDir = IO::mbToWideStr(autoSavePath);
+		if (!std::filesystem::exists(wAutoSaveDir))
+			return 0;
+
+		// get mmws files
+		using entry = std::filesystem::directory_entry;
+		std::vector<entry> deleteFiles;
+		for (const auto& file : std::filesystem::directory_iterator(wAutoSaveDir))
+		{
+			std::string extension = file.path().extension().string();
+			std::transform(extension.begin(), extension.end(), extension.begin(), ::tolower);
+			if (extension == MCH_MMWS_EXTENSION || extension == UC_MMWS_EXTENSION)
+				deleteFiles.push_back(file);
+		}
+
+		// sort files by modification date
+		std::sort(deleteFiles.begin(), deleteFiles.end(), [](const entry& f1, const entry& f2)
+		          { return f1.last_write_time() < f2.last_write_time(); });
+
+		int deleteCount = 0;
+		int remainingCount = count;
+		while (remainingCount && deleteFiles.size())
+		{
+			std::filesystem::remove(deleteFiles.begin()->path());
+			deleteFiles.erase(deleteFiles.begin());
+
+			--remainingCount;
+			++deleteCount;
+		}
+
+		return deleteCount;
+	}
+
+	void ScoreEditor::straightenHold3D()
+	{
+		if (!context.hasSelection()) return;
+
+		Score prevScore = context.score;
+
+		bool changed = false;
+		std::unordered_set<int> selected = context.selectedNotes;
+
+		int nextNoteID = 1;
+		for (const auto& pair : context.score.notes)
+		{
+			if (pair.first >= nextNoteID) nextNoteID = pair.first + 1;
+		}
+
+		for (int id : selected)
+		{
+			if (context.score.notes.find(id) == context.score.notes.end()) continue;
+			Note& note = context.score.notes.at(id);
+
+			if (note.getType() == NoteType::Hold && context.score.holdNotes.find(id) != context.score.holdNotes.end())
+			{
+				HoldNote& hold = context.score.holdNotes.at(id);
+				if (context.score.notes.find(hold.end) == context.score.notes.end()) continue;
+				Note& endNote = context.score.notes.at(hold.end);
+
+				int tickStart = note.tick;
+				int tickEnd = endNote.tick;
+				if (tickStart >= tickEnd) continue;
+
+				for (const auto& step : hold.steps)
+				{
+					context.score.notes.erase(step.ID);
+				}
+				hold.steps.clear();
+
+				double stm0 = Engine::accumulateScaledDuration(
+				    tickStart, TICKS_PER_BEAT, context.score.tempoChanges,
+				    context.score.hiSpeedChanges, note.layer);
+				double stm1 = Engine::accumulateScaledDuration(
+				    tickEnd, TICKS_PER_BEAT, context.score.tempoChanges,
+				    context.score.hiSpeedChanges, endNote.layer);
+
+				float noteDuration = Engine::getNoteDuration(
+				    Engine::getLayerEffectiveNoteSpeed(context.score, note.layer, config.pvNoteSpeed));
+
+				double y1 = std::pow(1.06, 45.0 * (stm0 - stm1) / noteDuration);
+
+				if (std::abs(1.0 / y1 - 1.0) < 1e-6) continue;
+
+				double laneStart = note.lane;
+				double laneEnd = endNote.lane;
+				double rightStart = note.lane + note.width;
+				double rightEnd = endNote.lane + endNote.width;
+
+				double BLane = (laneEnd - laneStart) / (1.0 / y1 - 1.0);
+				double ALane = laneStart - BLane;
+
+				double BRight = (rightEnd - rightStart) / (1.0 / y1 - 1.0);
+				double ARight = rightStart - BRight;
+
+				int division = timeline.getDivision();
+
+				int resolution = (division > 0) ? (int)(TICKS_PER_BEAT / (division / 4.0f)) : 120;
+				if (resolution < 10) resolution = 10;
+
+				for (int t = tickStart + resolution; t < tickEnd; t += resolution)
+				{
+					double stm_mid = Engine::accumulateScaledDuration(
+					    t, TICKS_PER_BEAT, context.score.tempoChanges,
+					    context.score.hiSpeedChanges, note.layer);
+					double y_mid = std::pow(1.06, 45.0 * (stm0 - stm_mid) / noteDuration);
+					
+					float lane_mid = (float)(ALane + BLane / y_mid);
+					float right_mid = (float)(ARight + BRight / y_mid);
+					float width_mid = right_mid - lane_mid;
+
+					Note stepNote(NoteType::HoldMid);
+					stepNote.tick = t;
+					stepNote.lane = lane_mid;
+					stepNote.width = std::max(0.1f, width_mid);
+					stepNote.parentID = hold.start.ID;
+					stepNote.layer = note.layer;
+
+					stepNote.ID = nextNoteID++;
+					
+					context.score.notes[stepNote.ID] = stepNote;
+
+					HoldStep step;
+					step.ID = stepNote.ID;
+					step.type = HoldStepType::Hidden;
+					step.ease = EaseType::Linear;
+					hold.steps.push_back(step);
+				}
+				changed = true;
+			}
+		}
+
+		if (changed)
+		{
+			context.pushHistory("3D Straighten", prevScore, context.score);
+
+			context.upToDate = false;
+			context.scorePreviewDrawData.drawingNotes.clear();
+		}
+	}
+}
+

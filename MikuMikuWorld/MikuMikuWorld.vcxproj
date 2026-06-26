@@ -1,4 +1,4 @@
-<?xml version="1.0" encoding="utf-8"?>
+﻿<?xml version="1.0" encoding="utf-8"?>
 <Project DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <ItemGroup Label="ProjectConfigurations">
     <ProjectConfiguration Include="Debug|Win32">
@@ -119,7 +119,7 @@
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_ENABLE_EXTENDED_ALIGNED_STORAGE;_DEBUG;DEBUG;</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
-      <AdditionalIncludeDirectories>../Depends/DirectXMath-master;../Depends/glad/include;../Depends/GLFW/include;../Depends/stb_image;../Depends/miniaudio;../Depends/json;../Depends/stb_vorbis;../Depends/openssl/include;../Depends;../Depends/zlib/include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../Depends/DirectXMath-master;../Depends/glad/include;../Depends/GLFW/include;../Depends/stb_image;../Depends/miniaudio;../Depends/json;../Depends/stb_vorbis;../Depends/openssl/include;../Depends;../Depends/zlib/include;ScoreEditor;ScoreEditor\Context;ScoreEditor\Timeline;ScoreEditor\Windows;ScorePreview;ScorePreview\Effects</AdditionalIncludeDirectories>
       <ObjectFileName>$(IntDir)</ObjectFileName>
     </ClCompile>
     <Link>
@@ -146,7 +146,7 @@
       <PreprocessorDefinitions>_CRT_SECURE_NO_WARNINGS;_ENABLE_EXTENDED_ALIGNED_STORAGE;</PreprocessorDefinitions>
       <ConformanceMode>true</ConformanceMode>
       <LanguageStandard>stdcpp17</LanguageStandard>
-      <AdditionalIncludeDirectories>../Depends/DirectXMath-master;../Depends/glad/include;../Depends/GLFW/include;../Depends/stb_image;../Depends/miniaudio;../Depends/json;../Depends/stb_vorbis;../Depends/openssl/include;../Depends;../Depends/zlib/include</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>../Depends/DirectXMath-master;../Depends/glad/include;../Depends/GLFW/include;../Depends/stb_image;../Depends/miniaudio;../Depends/json;../Depends/stb_vorbis;../Depends/openssl/include;../Depends;../Depends/zlib/include;ScoreEditor;ScoreEditor\Context;ScoreEditor\Timeline;ScoreEditor\Windows;ScorePreview;ScorePreview\Effects</AdditionalIncludeDirectories>
       <FavorSizeOrSpeed>Speed</FavorSizeOrSpeed>
       <ObjectFileName>$(IntDir)</ObjectFileName>
       <Optimization>MaxSpeed</Optimization>
@@ -184,7 +184,7 @@
     <ClCompile Include="BinaryWriter.cpp" />
     <ClCompile Include="ChartGalleryWindow.cpp" />
     <ClCompile Include="File.cpp" />
-    <ClCompile Include="HistoryManager.cpp" />
+    <ClCompile Include="ScoreEditor\Context\HistoryManager.cpp" />
     <ClCompile Include="ImGuiManager.cpp" />
     <ClCompile Include="ImGui\imgui.cpp" />
     <ClCompile Include="ImGui\imgui_demo.cpp" />
@@ -202,17 +202,17 @@
     <ClCompile Include="Localization.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Math.cpp" />
-    <ClCompile Include="MinMax.cpp" />
-    <ClCompile Include="Particle.cpp" />
-    <ClCompile Include="EffectView.cpp" />
-    <ClCompile Include="LayersWindow.cpp" />
+    <ClCompile Include="ScorePreview\Effects\MinMax.cpp" />
+    <ClCompile Include="ScorePreview\Effects\Particle.cpp" />
+    <ClCompile Include="ScorePreview\Effects\EffectView.cpp" />
+    <ClCompile Include="ScoreEditor\Windows\LayersWindow.cpp" />
     <ClCompile Include="NativeScoreSerializer.cpp" />
     <ClCompile Include="Note.cpp" />
     <ClCompile Include="OpenGlLoader.cpp" />
     <ClCompile Include="NotesPreset.cpp" />
-    <ClCompile Include="PreviewData.cpp" />
-    <ClCompile Include="PreviewEngine.cpp" />
-    <ClCompile Include="PresetsWindow.cpp" />
+    <ClCompile Include="ScorePreview\PreviewData.cpp" />
+    <ClCompile Include="ScorePreview\PreviewEngine.cpp" />
+    <ClCompile Include="ScoreEditor\Windows\PresetsWindow.cpp" />
     <ClCompile Include="Rendering\Camera.cpp" />
     <ClCompile Include="Rendering\Framebuffer.cpp" />
     <ClCompile Include="Rendering\Renderer.cpp" />
@@ -222,26 +222,26 @@
     <ClCompile Include="Rendering\VertexBuffer.cpp" />
     <ClCompile Include="ResourceManager.cpp" />
     <ClCompile Include="Score.cpp" />
-    <ClCompile Include="ScoreContext.cpp" />
-    <ClCompile Include="ScoreContextHistory.cpp" />
-    <ClCompile Include="ScoreContextMetaEvents.cpp" />
-    <ClCompile Include="ScoreEditorDebugWindow.cpp" />
-    <ClCompile Include="ScoreEditorDialogs.cpp" />
-    <ClCompile Include="ScoreNotePropertiesWindow.cpp" />
-    <ClCompile Include="ScoreEditorTimeline.cpp" />
-    <ClCompile Include="ScoreEditorTimelineAudio.cpp" />
-    <ClCompile Include="ScoreEditorTimelineGeometry.cpp" />
-    <ClCompile Include="ScoreEditorTimelineMetaEvents.cpp" />
-    <ClCompile Include="ScoreEditorTimelinePlayback.cpp" />
-    <ClCompile Include="ScoreEditorWindows.cpp" />
-    <ClCompile Include="ScorePropertiesWindow.cpp" />
-    <ClCompile Include="ScorePreview.cpp" />
-    <ClCompile Include="ScorePreviewBackground.cpp" />
-    <ClCompile Include="ScorePreviewEffects.cpp" />
-    <ClCompile Include="ScorePreviewNotes.cpp" />
-    <ClCompile Include="ScorePreviewStage.cpp" />
-    <ClCompile Include="ScorePreviewUI.cpp" />
-    <ClCompile Include="ScoreMetaEventUtils.cpp" />
+    <ClCompile Include="ScoreEditor\Context\ScoreContext.cpp" />
+    <ClCompile Include="ScoreEditor\Context\ScoreContextHistory.cpp" />
+    <ClCompile Include="ScoreEditor\Context\ScoreContextMetaEvents.cpp" />
+    <ClCompile Include="ScoreEditor\Windows\ScoreEditorDebugWindow.cpp" />
+    <ClCompile Include="ScoreEditor\Windows\ScoreEditorDialogs.cpp" />
+    <ClCompile Include="ScoreEditor\Windows\ScoreNotePropertiesWindow.cpp" />
+    <ClCompile Include="ScoreEditor\Timeline\ScoreEditorTimeline.cpp" />
+    <ClCompile Include="ScoreEditor\Timeline\ScoreEditorTimelineAudio.cpp" />
+    <ClCompile Include="ScoreEditor\Timeline\ScoreEditorTimelineGeometry.cpp" />
+    <ClCompile Include="ScoreEditor\Timeline\ScoreEditorTimelineMetaEvents.cpp" />
+    <ClCompile Include="ScoreEditor\Timeline\ScoreEditorTimelinePlayback.cpp" />
+    <ClCompile Include="ScoreEditor\Windows\ScoreEditorWindows.cpp" />
+    <ClCompile Include="ScoreEditor\Windows\ScorePropertiesWindow.cpp" />
+    <ClCompile Include="ScorePreview\ScorePreview.cpp" />
+    <ClCompile Include="ScorePreview\ScorePreviewBackground.cpp" />
+    <ClCompile Include="ScorePreview\ScorePreviewEffects.cpp" />
+    <ClCompile Include="ScorePreview\ScorePreviewNotes.cpp" />
+    <ClCompile Include="ScorePreview\ScorePreviewStage.cpp" />
+    <ClCompile Include="ScorePreview\ScorePreviewUI.cpp" />
+    <ClCompile Include="ScoreEditor\Timeline\ScoreMetaEventUtils.cpp" />
     <ClCompile Include="ScoreSerializer.cpp" />
     <ClCompile Include="ScoreSerializeWindow.cpp" />
     <ClCompile Include="ScoreStats.cpp" />
@@ -252,12 +252,12 @@
     <ClCompile Include="SusParser.cpp" />
     <ClCompile Include="SusSerializer.cpp" />
     <ClCompile Include="Tempo.cpp" />
-    <ClCompile Include="TimelineEventControls.cpp" />
-    <ClCompile Include="ScoreEditor.cpp" />
+    <ClCompile Include="ScoreEditor\Timeline\TimelineEventControls.cpp" />
+    <ClCompile Include="ScoreEditor\ScoreEditor.cpp" />
     <ClCompile Include="UI.cpp" />
     <ClCompile Include="UscSerializer.cpp" />
     <ClCompile Include="Utilities.cpp" />
-    <ClCompile Include="WaypointsWindow.cpp" />
+    <ClCompile Include="ScoreEditor\Windows\WaypointsWindow.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Application.h" />
@@ -272,9 +272,9 @@
     <ClInclude Include="Colors.h" />
     <ClInclude Include="Constants.h" />
     <ClInclude Include="File.h" />
-    <ClInclude Include="HistoryManager.h" />
+    <ClInclude Include="ScoreEditor\Context\HistoryManager.h" />
     <ClInclude Include="IconsFontAwesome5.h" />
-    <ClInclude Include="ImageCrop.h" />
+    <ClInclude Include="ScorePreview\ImageCrop.h" />
     <ClInclude Include="ImGuiManager.h" />
     <ClInclude Include="ImGui\imconfig.h" />
     <ClInclude Include="ImGui\imgui.h" />
@@ -293,16 +293,16 @@
     <ClInclude Include="Localization.h" />
     <ClInclude Include="Math.h" />
     <ClInclude Include="Audio\miniaudio.h" />
-    <ClInclude Include="MinMax.h" />
-    <ClInclude Include="Particle.h" />
-    <ClInclude Include="EffectView.h" />
+    <ClInclude Include="ScorePreview\Effects\MinMax.h" />
+    <ClInclude Include="ScorePreview\Effects\Particle.h" />
+    <ClInclude Include="ScorePreview\Effects\EffectView.h" />
     <ClInclude Include="NativeScoreFormat.h" />
     <ClInclude Include="NativeScoreSerializer.h" />
     <ClInclude Include="Note.h" />
     <ClInclude Include="NoteTypes.h" />
     <ClInclude Include="NotesPreset.h" />
-    <ClInclude Include="PreviewData.h" />
-    <ClInclude Include="PreviewEngine.h" />
+    <ClInclude Include="ScorePreview\PreviewData.h" />
+    <ClInclude Include="ScorePreview\PreviewEngine.h" />
     <ClInclude Include="Rendering\AnchorType.h" />
     <ClInclude Include="Rendering\Camera.h" />
     <ClInclude Include="Rendering\Framebuffer.h" />
@@ -316,11 +316,11 @@
     <ClInclude Include="resource.h" />
     <ClInclude Include="ResourceManager.h" />
     <ClInclude Include="Score.h" />
-    <ClInclude Include="ScoreContext.h" />
-    <ClInclude Include="ScoreEditorTimeline.h" />
-    <ClInclude Include="ScoreEditorWindows.h" />
-    <ClInclude Include="ScoreMetaEventUtils.h" />
-    <ClInclude Include="ScorePreview.h" />
+    <ClInclude Include="ScoreEditor\Context\ScoreContext.h" />
+    <ClInclude Include="ScoreEditor\Timeline\ScoreEditorTimeline.h" />
+    <ClInclude Include="ScoreEditor\Windows\ScoreEditorWindows.h" />
+    <ClInclude Include="ScoreEditor\Timeline\ScoreMetaEventUtils.h" />
+    <ClInclude Include="ScorePreview\ScorePreview.h" />
     <ClInclude Include="ScoreSerializer.h" />
     <ClInclude Include="ScoreSerializeWindow.h" />
     <ClInclude Include="ScoreStats.h" />
@@ -332,9 +332,9 @@
     <ClInclude Include="SusParser.h" />
     <ClInclude Include="SusSerializer.h" />
     <ClInclude Include="Tempo.h" />
-    <ClInclude Include="TimelineEventControls.h" />
-    <ClInclude Include="ScoreEditor.h" />
-    <ClInclude Include="TimelineMode.h" />
+    <ClInclude Include="ScoreEditor\Timeline\TimelineEventControls.h" />
+    <ClInclude Include="ScoreEditor\ScoreEditor.h" />
+    <ClInclude Include="ScoreEditor\Timeline\TimelineMode.h" />
     <ClInclude Include="UI.h" />
     <ClInclude Include="UscSerializer.h" />
     <ClInclude Include="Utilities.h" />
