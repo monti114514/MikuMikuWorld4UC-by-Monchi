@@ -3,7 +3,7 @@
 #include <random>
 #include <string>
 #include <vector>
-#include "../../Math.h"
+#include "../../MathUtils.h"
 #include "MinMax.h"
 #include "../../Utilities.h"
 #include "DirectXMath.h"

@@ -1,8 +1,8 @@
 #pragma once
 
 #include "ScoreSerializer.h"
-#include "BinaryReader.h"
-#include "BinaryWriter.h"
+#include "../../BinaryReader.h"
+#include "../../BinaryWriter.h"
 
 namespace MikuMikuWorld
 {

@@ -1,8 +1,9 @@
 #pragma once
 #include "UI.h"
 #include "json.hpp"
-#include "Math.h"
+#include "MathUtils.h"
 #include "InputBinding.h"
+#include <unordered_map>
 
 namespace MikuMikuWorld
 {
@@ -78,6 +79,20 @@ namespace MikuMikuWorld
 
 	constexpr size_t maxRecentFilesEntries = 10;
 
+	struct GalleryChartState
+	{
+		bool isFavorite = false;
+		std::string folder = "-";
+	};
+
+	struct GalleryConfiguration
+	{
+		std::vector<std::string> searchPaths;
+		std::vector<std::string> folders;
+		std::unordered_map<std::string, GalleryChartState> charts;
+		bool isSearchPathsOpen = true;
+	};
+
 	struct ApplicationConfiguration
 	{
 		std::string version;
@@ -126,6 +141,8 @@ namespace MikuMikuWorld
 		int seProfileIndex;
 		bool debugEnabled;
 		std::vector<std::string> pinnedQuickSettings;
+		GalleryConfiguration gallery;
+		bool hasGallerySettings = false;
 
 		float pvNoteSpeed{ 10.0f };
 		float pvStageOpacity{ 1.0f };

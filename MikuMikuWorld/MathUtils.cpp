@@ -1,4 +1,4 @@
-#include "Math.h"
+#include "MathUtils.h"
 #include <stdexcept>
 
 namespace MikuMikuWorld

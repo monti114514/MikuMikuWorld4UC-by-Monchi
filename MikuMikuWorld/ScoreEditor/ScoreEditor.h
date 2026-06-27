@@ -1,7 +1,7 @@
 #pragma once
-#include "../ChartGalleryWindow.h"
+#include "../Gallery/ChartGalleryWindow.h"
 #include "ScoreEditorWindows.h"
-#include "../ScoreSerializeWindow.h"
+#include "../Score/Serialization/ScoreSerializeWindow.h"
 #include "ScorePreview.h"
 #include <future>
 

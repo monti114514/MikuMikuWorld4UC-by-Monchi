@@ -196,6 +196,49 @@ namespace MikuMikuWorld
 			}
 		}
 
+		if (jsonIO::keyExists(configJson, "gallery"))
+		{
+			const json& galleryJson = configJson["gallery"];
+			hasGallerySettings = true;
+			gallery = GalleryConfiguration{};
+
+			if (galleryJson.contains("charts") && galleryJson["charts"].is_object())
+			{
+				for (auto& [filepath, data] : galleryJson["charts"].items())
+				{
+					gallery.charts[filepath] = {
+						data.value("isFavorite", false),
+						data.value("folder", "-")
+					};
+				}
+			}
+
+			if (galleryJson.contains("folders") && galleryJson["folders"].is_array())
+			{
+				for (const auto& folder : galleryJson["folders"])
+				{
+					if (folder.is_string())
+						gallery.folders.push_back(folder.get<std::string>());
+				}
+			}
+
+			if (galleryJson.contains("searchPaths") && galleryJson["searchPaths"].is_array())
+			{
+				for (const auto& path : galleryJson["searchPaths"])
+				{
+					if (path.is_string())
+						gallery.searchPaths.push_back(path.get<std::string>());
+				}
+			}
+			else if (galleryJson.contains("searchPath") && galleryJson["searchPath"].is_string())
+			{
+				gallery.searchPaths.push_back(galleryJson["searchPath"].get<std::string>());
+			}
+
+			gallery.isSearchPathsOpen =
+			    jsonIO::tryGetValue<bool>(galleryJson, "isSearchPathsOpen", gallery.isSearchPathsOpen);
+		}
+
 		if (jsonIO::keyExists(configJson, "input") &&
 		    jsonIO::keyExists(configJson["input"], "bindings"))
 		{
@@ -297,6 +340,20 @@ namespace MikuMikuWorld
 
 		config["pinnedQuickSettings"] = pinnedQuickSettings;
 
+		for (const auto& [filepath, state] : gallery.charts)
+		{
+			if (state.isFavorite || state.folder != "-")
+			{
+				config["gallery"]["charts"][filepath] = {
+					{ "isFavorite", state.isFavorite },
+					{ "folder", state.folder }
+				};
+			}
+		}
+		config["gallery"]["folders"] = gallery.folders;
+		config["gallery"]["searchPaths"] = gallery.searchPaths;
+		config["gallery"]["isSearchPathsOpen"] = gallery.isSearchPathsOpen;
+
 		json keyBindings;
 		for (const auto& binding : bindings)
 		{
@@ -383,6 +440,8 @@ namespace MikuMikuWorld
 		bgmVolume = 1.0f;
 		seVolume = 1.0f;
 		pinnedQuickSettings = { "masterVolume", "bgmVolume", "seVolume" };
+		gallery = GalleryConfiguration{};
+		hasGallerySettings = false;
 
 		debugEnabled = false;
 	}

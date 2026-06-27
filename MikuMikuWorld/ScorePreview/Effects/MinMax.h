@@ -1,5 +1,5 @@
 #pragma once
-#include "../../Math.h"
+#include "../../MathUtils.h"
 #include "../../Utilities.h"
 #include <vector>
 #include <DirectXMath.h>

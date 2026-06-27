@@ -1,7 +1,7 @@
 #pragma once
 
 #include "../../ImGui/imgui_internal.h"
-#include "../../Math.h"
+#include "../../MathUtils.h"
 
 namespace MikuMikuWorld
 {

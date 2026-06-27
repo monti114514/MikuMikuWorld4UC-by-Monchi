@@ -1,6 +1,7 @@
 #pragma once
-#include "Score.h"
-#include "Rendering/Texture.h"
+#include "../ApplicationConfiguration.h"
+#include "../Score.h"
+#include "../Rendering/Texture.h"
 #include <string>
 #include <vector>
 #include <memory>
@@ -11,11 +12,6 @@
 
 namespace MikuMikuWorld
 {
-	struct ChartState {
-		bool isFavorite = false;
-		std::string folder = "-"; 
-	};
-
 	struct GalleryItem {
 		std::string filepath;
 		std::string filename;
@@ -52,7 +48,7 @@ namespace MikuMikuWorld
 		bool folderDialogInProgress = false;
 		std::future<std::string> folderDialogFuture{};
 
-		std::unordered_map<std::string, ChartState> galleryStates;
+		std::unordered_map<std::string, GalleryChartState> galleryStates;
 		std::vector<std::shared_ptr<GalleryItem>> recentItems;
 		std::vector<std::shared_ptr<GalleryItem>> localItems;
 		std::vector<std::string> loadedRecentFiles;

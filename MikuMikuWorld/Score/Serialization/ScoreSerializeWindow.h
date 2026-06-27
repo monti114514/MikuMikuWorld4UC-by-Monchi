@@ -1,6 +1,6 @@
 #pragma once
 #include "ScoreSerializer.h"
-#include "ScoreContext.h"
+#include "../../ScoreEditor/Context/ScoreContext.h"
 
 namespace MikuMikuWorld
 {

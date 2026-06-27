@@ -2,7 +2,7 @@
 #include "ResourceManager.h"
 #include "ImGuiManager.h"
 #include "File.h"
-#include "Math.h"
+#include "MathUtils.h"
 #include <algorithm>
 
 namespace MikuMikuWorld

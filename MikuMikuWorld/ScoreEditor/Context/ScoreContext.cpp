@@ -4,7 +4,7 @@
 #include "ScoreMetaEventUtils.h"
 #include "../../UI.h"
 #include "../../Utilities.h"
-#include "../../Math.h"
+#include "../../MathUtils.h"
 #include <algorithm>
 #include <climits>
 #include <stdio.h>

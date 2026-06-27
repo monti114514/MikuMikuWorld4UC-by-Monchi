@@ -1,7 +1,7 @@
 #pragma once
 #include "ScoreSerializer.h"
 #include "Sonolus.h"
-#include "Constants.h"
+#include "../../Constants.h"
 #include <string>
 #include <memory>
 #include <utility>

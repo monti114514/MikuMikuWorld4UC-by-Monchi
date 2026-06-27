@@ -1,7 +1,7 @@
 #pragma once
 
-#include "Score.h"
-#include "File.h"
+#include "../../Score.h"
+#include "../../File.h"
 #include <memory>
 #include <stdexcept>
 #include <string>

@@ -1,10 +1,10 @@
 #include "SonolusSerializer.h"
-#include "Constants.h"
-#include "IO.h"
-#include "File.h"
-#include "Application.h"
-#include "ApplicationConfiguration.h"
-#include "Colors.h"
+#include "../../Constants.h"
+#include "../../IO.h"
+#include "../../File.h"
+#include "../../Application.h"
+#include "../../ApplicationConfiguration.h"
+#include "../../Colors.h"
 #include <algorithm>
 
 #ifdef _DEBUG

@@ -1,5 +1,5 @@
 #pragma once
-#include "Math.h"
+#include "MathUtils.h"
 #include "Score.h"
 #include <json.hpp>
 #include <unordered_set>

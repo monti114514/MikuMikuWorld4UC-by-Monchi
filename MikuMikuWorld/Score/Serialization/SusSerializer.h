@@ -1,6 +1,6 @@
 #pragma once
 #include "ScoreSerializer.h"
-#include "Application.h"
+#include "../../Application.h"
 
 namespace MikuMikuWorld
 {

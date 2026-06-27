@@ -1,7 +1,7 @@
 #pragma once
 #include <random>
 #include "../Score.h"
-#include "../Math.h"
+#include "../MathUtils.h"
 #include "EffectView.h"
 
 namespace MikuMikuWorld

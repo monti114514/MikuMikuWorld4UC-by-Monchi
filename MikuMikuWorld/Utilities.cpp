@@ -3,7 +3,7 @@
 #include "ImGui/imgui.h"
 #include "Localization.h"
 #include "IO.h"
-#include "Math.h"
+#include "MathUtils.h"
 #include <Windows.h>
 #include <ctime>
 #include <vector>

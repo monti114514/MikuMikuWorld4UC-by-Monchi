@@ -2,7 +2,7 @@
 #include <string>
 #include <vector>
 #include <variant>
-#include "JsonIO.h"
+#include "../../JsonIO.h"
 
 namespace Sonolus
 {

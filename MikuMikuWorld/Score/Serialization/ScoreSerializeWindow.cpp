@@ -1,17 +1,17 @@
-#include "Application.h"
+#include "../../Application.h"
 #include "ScoreSerializeWindow.h"
 
-#include "AudioTrackUtils.h"
-#include "File.h"
+#include "../../AudioTrackUtils.h"
+#include "../../File.h"
 #include "NativeScoreSerializer.h"
 #include "SusSerializer.h"
 #include "UscSerializer.h"
 #include "SonolusSerializer.h"
 
-#include "Localization.h"
-#include "ApplicationConfiguration.h"
-#include "Colors.h"
-#include "ScoreEditor.h"
+#include "../../Localization.h"
+#include "../../ApplicationConfiguration.h"
+#include "../../Colors.h"
+#include "../../ScoreEditor/ScoreEditor.h"
 
 namespace MikuMikuWorld
 {

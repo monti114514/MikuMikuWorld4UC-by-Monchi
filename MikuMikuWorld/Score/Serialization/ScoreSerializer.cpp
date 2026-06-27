@@ -1,8 +1,8 @@
 #include "ScoreSerializer.h"
-#include "Localization.h"
-#include "Constants.h"
-#include "IO.h"
-#include "File.h"
+#include "../../Localization.h"
+#include "../../Constants.h"
+#include "../../IO.h"
+#include "../../File.h"
 #include <array>
 #include <algorithm>
 

@@ -1,6 +1,6 @@
 #include "SusParser.h"
-#include "File.h"
-#include "IO.h"
+#include "../../File.h"
+#include "../../IO.h"
 
 using namespace IO;
 

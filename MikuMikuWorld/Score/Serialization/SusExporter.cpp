@@ -1,7 +1,7 @@
 #include "SUS.h"
 #include "SusExporter.h"
-#include "IO.h"
-#include "File.h"
+#include "../../IO.h"
+#include "../../File.h"
 #include <algorithm>
 #include <numeric>
 #include <unordered_set>
