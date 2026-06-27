@@ -72,8 +72,8 @@ Collapsed=0
 DockId=0x0000000A,0
 
 [Window][InvisibleWindow]
-Pos=0,55
-Size=1920,954
+Pos=0,35
+Size=1920,974
 Collapsed=0
 
 [Window][Debug##Default]
@@ -99,7 +99,7 @@ Size=750,600
 Collapsed=0
 
 [Window][###unsaved_changes]
-Pos=735,414
+Pos=735,404
 Size=450,200
 Collapsed=0
 
@@ -119,6 +119,11 @@ Pos=320,185
 Size=1280,659
 Collapsed=0
 
+[Window][###about]
+Pos=710,339
+Size=500,350
+Collapsed=0
+
 [Table][0xD68DAD8B,2]
 RefScale=16
 Column 0  Weight=1.0000
@@ -126,11 +131,11 @@ Column 1  Width=89
 
 [Table][0x519E09DE,2]
 RefScale=16
-Column 0  Width=159
+Column 0  Width=179
 Column 1  Weight=1.0000
 
 [Docking][Data]
-DockSpace             ID=0xF442860A Window=0xD8117908 Pos=0,78 Size=1920,954 Split=X
+DockSpace             ID=0xF442860A Window=0xD8117908 Pos=0,58 Size=1920,974 Split=X
   DockNode            ID=0x00000007 Parent=0xF442860A SizeRef=249,954 Split=Y Selected=0xCB59F716
     DockNode          ID=0x00000009 Parent=0x00000007 SizeRef=249,555 Selected=0xCB59F716
     DockNode          ID=0x0000000A Parent=0x00000007 SizeRef=249,397 Selected=0xEC13F1BA
