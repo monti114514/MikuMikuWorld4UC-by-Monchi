@@ -719,7 +719,6 @@ namespace MikuMikuWorld
 		drawList->AddLine(ImVec2(exX1, y), ImVec2(exX2, y), cursorColor,
 		                  primaryLineThickness + 1.0f);
 
-		contextMenu(context);
 		if (config.drawHiSpeedAutomation) {
 			// WIP 
 
@@ -759,6 +758,7 @@ namespace MikuMikuWorld
 			ImGui::OpenPopup("edit_event");
 		}
 
+		contextMenu(context);
 		eventEditor(context);
 		updateNotes(context, edit, renderer);
 
@@ -3080,23 +3080,20 @@ namespace MikuMikuWorld
 				}
 
 				if (ImGui::IsMouseClicked(1)) {
-					if (current.tick != 0) {
-						Score prev = context.score;
-						
-						std::unordered_set<id_t> deleteIds;
-						if (context.selectedHiSpeedChanges.find(current.ID) != context.selectedHiSpeedChanges.end()) {
-							deleteIds = context.selectedHiSpeedChanges;
-						} else {
-							deleteIds.insert(current.ID);
-						}
-
-						for (auto id : deleteIds) {
-							if (context.score.hiSpeedChanges[id].tick != 0) { 
-								context.score.hiSpeedChanges.erase(id);
-							}
-						}
-						context.pushHistory("Delete hi-speed", prev, context.score);
+					if (!isSelected) {
+						context.selectedNotes.clear();
+						context.selectedMetaEvents.clear();
+						context.selectedHiSpeedChanges.clear();
+						context.selectedHiSpeedChanges.insert(current.ID);
 					}
+					eventEdit.editId = current.ID;
+					eventEdit.editHiSpeed = current.speed;
+					eventEdit.editHiSpeedEase = current.ease;
+					eventEdit.editHiSpeedSkip = current.skips;
+					eventEdit.editHiSpeedHideNote = current.hideNotes;
+					eventEdit.type = EventType::HiSpeed;
+					suppressTimelineContextMenu = true;
+					ImGui::OpenPopup("edit_event");
 				}
 			}
 

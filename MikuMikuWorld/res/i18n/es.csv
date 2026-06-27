@@ -334,10 +334,6 @@ skill_effect_score,Score Boost
 skill_effect_heal,Heal
 skill_effect_perfect,Perfect Lock
 skill_level,Level
-skill_effect_score_desc,Increases score gain while active.
-skill_effect_heal_desc,Restores life when activated.
-skill_effect_perfect_desc,Strengthens judgment support while active.
-skill_level_desc,Level 1-4 is exported to Skill.level.
 fever_start_tick,FEVER Start Tick
 fever_end_tick,FEVER End Tick
 layer_force_note_speed_enabled,Force Note Speed

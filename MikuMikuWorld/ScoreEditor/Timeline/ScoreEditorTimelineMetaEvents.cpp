@@ -544,6 +544,7 @@ namespace MikuMikuWorld
 				{
 					if (!context.isMetaEventSelected(item.selectionKey))
 						context.selectMetaEvent(item.selectionKey, false);
+					suppressTimelineContextMenu = true;
 					openMetaEventEditor(context, item.selectionKey);
 				}
 
@@ -672,6 +673,7 @@ namespace MikuMikuWorld
 		{
 			if (!context.isMetaEventSelected(event))
 				context.selectMetaEvent(event, false);
+			suppressTimelineContextMenu = true;
 			return true;
 		}
 		return false;
@@ -710,12 +712,18 @@ namespace MikuMikuWorld
 		auto color = hideNotes ? (enabled ? hideSpeedColor : inactiveHideSpeedColor)
 		                       : (enabled ? speedColor : inactiveSpeedColor);
 
-		return TimelineEventControls::eventControl(
+		bool activated = TimelineEventControls::eventControl(
 		    hiSpeedStartX, pos,
 		    selected ? ImGui::ColorConvertFloat4ToU32(generateHighlightColor(
 		                   generateHighlightColor(ImGui::ColorConvertU32ToFloat4(color))))
 		             : color,
 		    txt.c_str(), enabled);
+		if (enabled && ImGui::IsItemClicked(ImGuiMouseButton_Right))
+		{
+			suppressTimelineContextMenu = true;
+			return true;
+		}
+		return activated;
 	}
 
 	bool ScoreEditorTimeline::waypointControl(const ScoreContext& context, const Waypoint& waypoint)
@@ -907,22 +915,6 @@ namespace MikuMikuWorld
 				eventEdited |= UI::addIntProperty(fitColumn(getString("skill_level")),
 				                                  eventEdit.editSkillLevel, "Lv.%d", 1, 4);
 				UI::endPropertyColumns();
-
-				switch (eventEdit.editSkillEffect)
-				{
-				case SkillEffect::Score:
-					ImGui::TextWrapped("%s", getString("skill_effect_score_desc"));
-					break;
-				case SkillEffect::Heal:
-					ImGui::TextWrapped("%s", getString("skill_effect_heal_desc"));
-					break;
-				case SkillEffect::Perfect:
-					ImGui::TextWrapped("%s", getString("skill_effect_perfect_desc"));
-					break;
-				default:
-					break;
-				}
-				ImGui::TextDisabled("%s", getString("skill_level_desc"));
 
 				SkillTrigger& skill = context.score.skills[eventEdit.editId];
 				if (eventEdited)
