@@ -119,6 +119,13 @@ bpm, BPM
 time_signature, 拍子
 none, 無し
 default, 通常
+flick_direction_none,無し
+flick_direction_up,上
+flick_direction_left,左
+flick_direction_right,右
+flick_direction_down,下
+flick_direction_down_left,左下
+flick_direction_down_right,右下
 left, 左
 right, 右
 down, 下

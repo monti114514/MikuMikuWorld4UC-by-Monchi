@@ -111,6 +111,13 @@ bpm,BPM
 time_signature,박자표
 none,없음
 default,기본
+flick_direction_none,None
+flick_direction_up,Up
+flick_direction_left,Left
+flick_direction_right,Right
+flick_direction_down,Down
+flick_direction_down_left,Down Left
+flick_direction_down_right,Down Right
 left,왼쪽
 right,오른쪽
 #- down,

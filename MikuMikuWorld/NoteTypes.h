@@ -28,6 +28,12 @@ namespace MikuMikuWorld
 		"none", "default", "left", "right", "down", "down_left", "down_right"
 	};
 
+	constexpr const char* flickDirectionKeys[]{
+		"flick_direction_none", "flick_direction_up", "flick_direction_left",
+		"flick_direction_right", "flick_direction_down", "flick_direction_down_left",
+		"flick_direction_down_right"
+	};
+
 	enum class SoundEffectType : uint8_t
 	{
 		Default,

@@ -258,8 +258,8 @@ namespace MikuMikuWorld
 
 			if (ImGui::BeginMenu(getString("flick_type"), context.selectionHasFlickable()))
 			{
-				for (int i = 0; i < arrayLength(flickTypes); ++i)
-					if (ImGui::MenuItem(getString(flickTypes[i])))
+				for (int i = 0; i < arrayLength(flickDirectionKeys); ++i)
+					if (ImGui::MenuItem(getString(flickDirectionKeys[i])))
 						context.setFlick((FlickType)i);
 				ImGui::EndMenu();
 			}
@@ -2816,7 +2816,7 @@ namespace MikuMikuWorld
 				            "%s\nFriction: %s\nFlick: %s",
 				            note.ID, static_cast<uint8_t>(note.getType()), note.tick, note.lane,
 				            note.width, boolToString(note.critical), boolToString(note.friction),
-				            flickTypes[static_cast<int>(note.flick)]);
+				            getString(flickDirectionKeys[static_cast<int>(note.flick)]));
 			}
 			else
 			{

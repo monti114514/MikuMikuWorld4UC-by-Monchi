@@ -551,8 +551,9 @@ namespace MikuMikuWorld
 			case TimelineMode::InsertFlick:
 				UI::addIntProperty(getString("note_width"), edit.noteWidth, MIN_NOTE_WIDTH,
 				                   MAX_NOTE_WIDTH);
-				UI::addSelectProperty<FlickType>(getString("flick"), edit.flickType, flickTypes,
-				                                 arrayLength(flickTypes));
+				UI::addSelectProperty<FlickType>(getString("flick"), edit.flickType,
+				                                 flickDirectionKeys,
+				                                 arrayLength(flickDirectionKeys));
 				break;
 			case TimelineMode::InsertLong:
 				UI::addIntProperty(getString("note_width"), edit.noteWidth, MIN_NOTE_WIDTH,
