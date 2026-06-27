@@ -450,7 +450,11 @@ namespace MikuMikuWorld
 
 	void ScoreEditorTimeline::updateAudioTrackEditing(ScoreContext& context)
 	{
-		suppressTimelineContextMenu = false;
+		if (!ImGui::IsMouseDown(ImGuiMouseButton_Right) &&
+		    !ImGui::IsMouseReleased(ImGuiMouseButton_Right))
+		{
+			suppressTimelineContextMenu = false;
+		}
 		if (!context.isAudioEditing() || context.score.audioTrack.locked)
 			return;
 

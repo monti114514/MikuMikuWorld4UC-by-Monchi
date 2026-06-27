@@ -712,7 +712,7 @@ namespace MikuMikuWorld
 		auto color = hideNotes ? (enabled ? hideSpeedColor : inactiveHideSpeedColor)
 		                       : (enabled ? speedColor : inactiveSpeedColor);
 
-		bool activated = TimelineEventControls::eventControl(
+		TimelineEventControls::eventControl(
 		    hiSpeedStartX, pos,
 		    selected ? ImGui::ColorConvertFloat4ToU32(generateHighlightColor(
 		                   generateHighlightColor(ImGui::ColorConvertU32ToFloat4(color))))
@@ -723,7 +723,7 @@ namespace MikuMikuWorld
 			suppressTimelineContextMenu = true;
 			return true;
 		}
-		return activated;
+		return false;
 	}
 
 	bool ScoreEditorTimeline::waypointControl(const ScoreContext& context, const Waypoint& waypoint)

@@ -3179,16 +3179,6 @@ namespace MikuMikuWorld
 				if (ImGui::IsMouseReleased(0)) {
 					if (nodeWasDragged) {
 						context.pushHistory("Drag hi-speed node", prevScoreForDrag, context.score);
-					} else {
-						if (!ImGui::GetIO().KeyCtrl && !ImGui::GetIO().KeyShift) {
-							eventEdit.editId = current.ID;
-							eventEdit.editHiSpeed = current.speed;
-							eventEdit.editHiSpeedEase = current.ease;
-							eventEdit.editHiSpeedSkip = current.skips;
-							eventEdit.editHiSpeedHideNote = current.hideNotes;
-							eventEdit.type = EventType::HiSpeed;
-							ImGui::OpenPopup("edit_event");
-						}
 					}
 					draggingNodeID = -1;
 				}
