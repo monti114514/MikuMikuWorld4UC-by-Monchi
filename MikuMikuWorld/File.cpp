@@ -153,7 +153,7 @@ namespace IO
 		if (stream->is_open())
 		{
 			for (const auto& line : lines)
-				stream->write(line.c_str(), line.length());
+				writeLine(line);
 		}
 	}
 

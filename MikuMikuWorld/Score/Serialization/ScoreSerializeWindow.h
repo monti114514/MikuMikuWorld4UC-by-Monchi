@@ -1,5 +1,6 @@
 #pragma once
 #include "ScoreSerializer.h"
+#include "SusCompatibilityReport.h"
 #include "../../ScoreEditor/Context/ScoreContext.h"
 
 namespace MikuMikuWorld
@@ -8,6 +9,9 @@ namespace MikuMikuWorld
 	{
 		static bool isSerializable(SerializeFormat format, const Score& score);
 		void createSerializer();
+		void resetSusCompatibilityState();
+		bool prepareSusCompatibilityReport();
+		void openExportFileDialog();
 		
 	  public:
 		DefaultScoreSerializeController(Score score);
@@ -19,6 +23,10 @@ namespace MikuMikuWorld
 		std::unique_ptr<ScoreSerializer> serializer;
 		std::vector<bool> serializable;
 		SerializeFormat selectedFormat{ -1 };
+		SusCompatibilityReport susCompatibilityReport;
+		bool susCompatibilityReportReady{ false };
+		bool susCompatibilityAccepted{ false };
+		bool pendingExportFileDialog{ false };
 	};
 
 	class DefaultScoreDeserializeController : public ScoreSerializeController

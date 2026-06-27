@@ -342,3 +342,27 @@ pinned_settings,Pinned Settings
 pin_quick_setting,Show in Quick Settings
 unpin_quick_setting,Hide from Quick Settings
 no_pinned_settings,No pinned settings
+sus_export_compatibility_title,SUS Export Compatibility
+sus_export_compatibility_message,SUS cannot preserve some chart information. Review the items below before exporting.
+sus_export_errors,Items that prevent export
+sus_export_warnings,Items that will not be preserved
+sus_export_continue,Export Anyway
+sus_issue_base_life_point,Life point is not supported by SUS
+sus_issue_waypoints,Waypoints are not saved in SUS
+sus_issue_layer_folders,Layer folder data is not saved in SUS
+sus_issue_force_note_speed,Fixed note speed is not saved in SUS
+sus_issue_skill_details,Skill effect and level are not saved in SUS
+sus_issue_invalid_layer,Invalid layer reference
+sus_issue_hispeed_details,HiSpeed skip/ease/hide notes settings are not saved in SUS
+sus_issue_fractional_lane,Fractional lane notes cannot be exported to SUS
+sus_issue_fractional_width,Fractional width notes cannot be exported to SUS
+sus_issue_dummy_notes,Dummy notes cannot be exported to SUS
+sus_issue_sound_effect,Per-note sound effect settings are not saved in SUS
+sus_issue_down_flick,Down flick notes cannot be exported to SUS
+sus_issue_invalid_lane_range,Lane position is outside the SUS range
+sus_issue_invalid_width_range,Note width is outside the SUS range
+sus_issue_reserved_event_lane,Some notes are placed where NextRUSH+ interprets them as Skill or FEVER
+sus_issue_guide_color,Guide colors are not fully saved in SUS
+sus_issue_hold_fade,Unsupported hold fade settings
+sus_issue_hold_step_layer,Hold Step Layer is not saved in SUS
+sus_issue_hold_ease,Unsupported hold easing settings

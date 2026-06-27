@@ -12,6 +12,7 @@
 #include "../../ApplicationConfiguration.h"
 #include "../../Colors.h"
 #include "../../ScoreEditor/ScoreEditor.h"
+#include <algorithm>
 
 namespace MikuMikuWorld
 {
@@ -27,8 +28,97 @@ namespace MikuMikuWorld
 	};
 
 	static constexpr std::array<size_t, FORMAT_COUNT> EXPORT_AVAILABILITY = {
-		false, false, false, false, false, true
+		false, false, false, true, false, true
 	};
+
+	static std::string formatSusIssue(const SusCompatibilityIssue& issue)
+	{
+		const char* text = getString(issue.textKey.c_str());
+		return issue.count > 1 ? IO::formatString("%s (%d)", text, issue.count) : text;
+	}
+
+	static void drawSusIssueList(const std::vector<SusCompatibilityIssue>& issues)
+	{
+		for (const auto& issue : issues)
+		{
+			const std::string text = formatSusIssue(issue);
+			ImGui::BulletText("%s", text.c_str());
+		}
+	}
+
+	enum class SusCompatibilityPopupResult
+	{
+		None,
+		Continue,
+		Cancel,
+	};
+
+	static bool hasSusCompatibilityIssues(const SusCompatibilityReport& report)
+	{
+		return report.hasErrors() || report.hasWarnings();
+	}
+
+	static SusCompatibilityPopupResult drawSusCompatibilityPopup(
+	    const SusCompatibilityReport& report)
+	{
+		SusCompatibilityPopupResult result = SusCompatibilityPopupResult::None;
+		ImGui::SetNextWindowPos(ImGui::GetMainViewport()->GetWorkCenter(),
+		                        ImGuiCond_Always, ImVec2(0.5f, 0.5f));
+		ImGui::SetNextWindowSizeConstraints({ 480, 0 }, { 720, FLT_MAX });
+		ImGui::SetNextWindowViewport(ImGui::GetMainViewport()->ID);
+		const std::string title = IO::formatString("%s###sus_export_compatibility",
+		                                           getString("sus_export_compatibility_title"));
+		if (ImGui::BeginPopupModal(title.c_str(), NULL, ImGuiWindowFlags_AlwaysAutoResize))
+		{
+			ImGui::TextWrapped("%s", getString("sus_export_compatibility_message"));
+			ImGui::Spacing();
+
+			if (report.hasErrors())
+			{
+				ImGui::TextColored(ImVec4(1.0f, 0.35f, 0.30f, 1.0f),
+				                   "%s", getString("sus_export_errors"));
+				drawSusIssueList(report.errors);
+				ImGui::Spacing();
+			}
+
+			if (report.hasWarnings())
+			{
+				ImGui::TextColored(ImVec4(1.0f, 0.75f, 0.30f, 1.0f),
+				                   "%s", getString("sus_export_warnings"));
+				drawSusIssueList(report.warnings);
+				ImGui::Spacing();
+			}
+
+			ImGui::Separator();
+			const ImGuiStyle& style = ImGui::GetStyle();
+			const float buttonWidth = 160.0f;
+			const float spacing = style.ItemSpacing.x;
+			const bool canContinue = !report.hasErrors();
+			const float totalButtonWidth =
+			    canContinue ? buttonWidth * 2.0f + spacing : buttonWidth;
+			const float availableWidth = ImGui::GetContentRegionAvail().x;
+			ImGui::SetCursorPosX(ImGui::GetCursorPosX() +
+			                     std::max(0.0f, availableWidth - totalButtonWidth));
+
+			if (canContinue)
+			{
+				if (ImGui::Button(getString("sus_export_continue"), { buttonWidth, 0 }))
+				{
+					result = SusCompatibilityPopupResult::Continue;
+					ImGui::CloseCurrentPopup();
+				}
+				ImGui::SameLine();
+			}
+			if (ImGui::Button(getString("cancel"), { buttonWidth, 0 }))
+			{
+				result = SusCompatibilityPopupResult::Cancel;
+				ImGui::CloseCurrentPopup();
+			}
+
+			ImGui::EndPopup();
+		}
+		return result;
+	}
 
 	DefaultScoreSerializeController::DefaultScoreSerializeController(Score score)
 	{
@@ -57,7 +147,7 @@ namespace MikuMikuWorld
 		case SerializeFormat::NativeFormat:
 			return NativeScoreSerializer::canSerialize(score);
 		case SerializeFormat::SusFormat:
-			return SusSerializer::canSerialize(score);
+			return true;
 		case SerializeFormat::UscFormat:
 			return UscSerializer::canSerialize(score);
 		case SerializeFormat::LvlDataFormat:
@@ -104,13 +194,86 @@ namespace MikuMikuWorld
 			scoreFilename = filename;
 	}
 
+	void DefaultScoreSerializeController::resetSusCompatibilityState()
+	{
+		susCompatibilityReport = {};
+		susCompatibilityReportReady = false;
+		susCompatibilityAccepted = false;
+		pendingExportFileDialog = false;
+	}
+
+	bool DefaultScoreSerializeController::prepareSusCompatibilityReport()
+	{
+		if (selectedFormat != SerializeFormat::SusFormat)
+			return true;
+		if (!susCompatibilityReportReady)
+		{
+			susCompatibilityReport = SusSerializer::getCompatibilityReport(score);
+			susCompatibilityReportReady = true;
+			susCompatibilityAccepted = !hasSusCompatibilityIssues(susCompatibilityReport);
+		}
+		return susCompatibilityAccepted;
+	}
+
+	void DefaultScoreSerializeController::openExportFileDialog()
+	{
+		IO::FileDialog fileDialog{};
+		fileDialog.title = "Export Chart";
+		fileDialog.filters = { getFormatFilter(selectedFormat) };
+		fileDialog.defaultExtension = getFormatDefaultExtension(selectedFormat);
+		fileDialog.parentWindowHandle = Application::windowState.windowHandle;
+
+		if (fileDialog.saveFile() == IO::FileDialogResult::OK)
+		{
+			this->filename = fileDialog.outputFilename;
+			createSerializer();
+			ImGui::CloseCurrentPopup();
+		}
+	}
+
 	SerializeResult DefaultScoreSerializeController::update()
 	{
 		if (serializer && !filename.empty())
 		{
+			SerializeFormat format = toSerializeFormat(filename);
+			if (format == SerializeFormat::SusFormat && !susCompatibilityAccepted)
+			{
+				if (!susCompatibilityReportReady)
+				{
+					susCompatibilityReport = SusSerializer::getCompatibilityReport(score);
+					susCompatibilityReportReady = true;
+					if (!susCompatibilityReport.hasErrors() &&
+					    !susCompatibilityReport.hasWarnings())
+					{
+						susCompatibilityAccepted = true;
+					}
+					else
+					{
+						ImGui::OpenPopup("###sus_export_compatibility");
+					}
+				}
+
+				if (!susCompatibilityAccepted)
+				{
+					if (!ImGui::IsPopupOpen("###sus_export_compatibility"))
+						ImGui::OpenPopup("###sus_export_compatibility");
+
+					switch (drawSusCompatibilityPopup(susCompatibilityReport))
+					{
+					case SusCompatibilityPopupResult::Continue:
+						susCompatibilityAccepted = true;
+						break;
+					case SusCompatibilityPopupResult::Cancel:
+						return SerializeResult::Cancel;
+					case SusCompatibilityPopupResult::None:
+						break;
+					}
+					return SerializeResult::None;
+				}
+			}
+
 			try
 			{
-				SerializeFormat format = toSerializeFormat(filename);
 				if (format == SerializeFormat::LvlDataFormat &&
 				    AudioTrackUtils::hasAudioTrackEdits(score))
 				{
@@ -154,15 +317,19 @@ namespace MikuMikuWorld
 
 			ImGui::SetNextWindowPos(ImGui::GetMainViewport()->GetWorkCenter(), ImGuiCond_Always,
 			                        ImVec2(0.5f, 0.5f));
-			ImGui::SetNextWindowSizeConstraints({ 450, 300 }, { FLT_MAX, FLT_MAX });
-			ImGui::SetNextWindowSize(ImGui::GetMainViewport()->WorkSize / 1.5f, ImGuiCond_Always);
+			ImGui::SetNextWindowSize({ 560, 260 }, ImGuiCond_Always);
 			ImGui::SetNextWindowViewport(ImGui::GetMainViewport()->ID);
 			if (ImGui::BeginPopupModal(APP_NAME "###serializer_picker", NULL,
 			                           ImGuiWindowFlags_NoResize))
 			{
 				const ImGuiStyle& style = ImGui::GetStyle();
 				ImGui::Text(getString("export_as_file_format"));
-				ImGui::Checkbox(getString("minify"), &config.minifyOutput);
+				const bool canMinify = selectedFormat != SerializeFormat::SusFormat;
+				bool minifyOutput = canMinify && config.minifyOutput;
+				ImGui::BeginDisabled(!canMinify);
+				if (ImGui::Checkbox(getString("minify"), &minifyOutput) && canMinify)
+					config.minifyOutput = minifyOutput;
+				ImGui::EndDisabled();
 				ImVec2 avail = ImGui::GetContentRegionAvail();
 				float btnWidth = avail.x / 2 - style.ItemSpacing.x * 2,
 				      btnHeight = ImGui::GetFrameHeight();
@@ -186,7 +353,11 @@ namespace MikuMikuWorld
 						}
 						ImGui::BeginDisabled(!serializable[i]);
 						if (ImGui::Selectable(FORMAT_NAMES[i].data(), isSelected))
+						{
+							if (selectedFormat != static_cast<SerializeFormat>(i))
+								resetSusCompatibilityState();
 							selectedFormat = static_cast<SerializeFormat>(i);
+						}
 						ImGui::EndDisabled();
 						if (isSelected)
 						{
@@ -200,18 +371,14 @@ namespace MikuMikuWorld
 				ImGui::BeginDisabled(!isValidFormat(selectedFormat));
 				if (ImGui::Button(getString("select"), { btnWidth, btnHeight }))
 				{
-					IO::FileDialog fileDialog{};
-					fileDialog.title = "Export Chart";
-					fileDialog.filters = { getFormatFilter(selectedFormat) };
-					fileDialog.defaultExtension = getFormatDefaultExtension(selectedFormat);
-					fileDialog.parentWindowHandle = Application::windowState.windowHandle;
-
-					if (fileDialog.saveFile() == IO::FileDialogResult::OK)
+					if (selectedFormat == SerializeFormat::SusFormat &&
+					    !prepareSusCompatibilityReport())
 					{
-						this->filename = fileDialog.outputFilename;
-						createSerializer();
-						ImGui::CloseCurrentPopup();
+						pendingExportFileDialog = true;
+						ImGui::OpenPopup("###sus_export_compatibility");
 					}
+					else
+						pendingExportFileDialog = true;
 				}
 				ImGui::EndDisabled();
 				ImGui::SameLine(0, ImGui::GetStyle().ItemSpacing.x * 2);
@@ -219,6 +386,25 @@ namespace MikuMikuWorld
 				{
 					ImGui::CloseCurrentPopup();
 					result = SerializeResult::Cancel;
+				}
+
+				switch (drawSusCompatibilityPopup(susCompatibilityReport))
+				{
+				case SusCompatibilityPopupResult::Continue:
+					susCompatibilityAccepted = true;
+					break;
+				case SusCompatibilityPopupResult::Cancel:
+					pendingExportFileDialog = false;
+					break;
+				case SusCompatibilityPopupResult::None:
+					break;
+				}
+
+				if (pendingExportFileDialog &&
+				    !ImGui::IsPopupOpen("###sus_export_compatibility"))
+				{
+					pendingExportFileDialog = false;
+					openExportFileDialog();
 				}
 				ImGui::EndPopup();
 			}
@@ -306,8 +492,7 @@ namespace MikuMikuWorld
 
 			ImGui::SetNextWindowPos(ImGui::GetMainViewport()->GetWorkCenter(), ImGuiCond_Always,
 			                        ImVec2(0.5f, 0.5f));
-			ImGui::SetNextWindowSizeConstraints({ 450, 300 }, { FLT_MAX, FLT_MAX });
-			ImGui::SetNextWindowSize(ImGui::GetMainViewport()->WorkSize / 1.5f, ImGuiCond_Always);
+			ImGui::SetNextWindowSize({ 560, 260 }, ImGuiCond_Always);
 			ImGui::SetNextWindowViewport(ImGui::GetMainViewport()->ID);
 			if (ImGui::BeginPopupModal(APP_NAME "###deserializer_picker", NULL,
 			                           ImGuiWindowFlags_NoResize))

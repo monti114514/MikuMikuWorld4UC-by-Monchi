@@ -2,15 +2,150 @@
 #include "SUS.h"
 #include "SusExporter.h"
 #include "SusParser.h"
+#include "../../IO.h"
+#include <algorithm>
+#include <array>
+#include <cmath>
+#include <stdexcept>
+#include <unordered_set>
 
 namespace MikuMikuWorld
 {
+	namespace
+	{
+		constexpr int SUS_BASE36_MIN = 0;
+		constexpr int SUS_BASE36_MAX = 35;
+
+		bool isIntegerValue(float value)
+		{
+			return std::isfinite(value) && std::floor(value) == value;
+		}
+
+		int getSusLaneOffset(const Score& score)
+		{
+			return score.metadata.laneExtension == 0 ? 2 : score.metadata.laneExtension;
+		}
+
+		bool isBase36Value(int value)
+		{
+			return value >= SUS_BASE36_MIN && value <= SUS_BASE36_MAX;
+		}
+
+		bool isLayerValid(const Score& score, int layer)
+		{
+			return layer >= 0 && layer < static_cast<int>(score.layers.size()) &&
+			       !score.layers[layer].isFolder;
+		}
+
+		bool isReservedNextRushTap(int lane, int type)
+		{
+			return lane == 0 && type == 4 || lane == 15 && (type == 1 || type == 2);
+		}
+
+		void addIssue(std::vector<SusCompatibilityIssue>& issues,
+		              SusCompatibilityIssueSeverity severity, const char* textKey)
+		{
+			auto it = std::find_if(issues.begin(), issues.end(),
+			                       [textKey](const SusCompatibilityIssue& issue)
+			                       { return issue.textKey == textKey; });
+			if (it != issues.end())
+			{
+				it->count++;
+				return;
+			}
+			issues.push_back(SusCompatibilityIssue{ severity, textKey, 1 });
+		}
+
+		void addWarning(SusCompatibilityReport& report, const char* textKey)
+		{
+			addIssue(report.warnings, SusCompatibilityIssueSeverity::Warning, textKey);
+		}
+
+		void addError(SusCompatibilityReport& report, const char* textKey)
+		{
+			addIssue(report.errors, SusCompatibilityIssueSeverity::Error, textKey);
+		}
+
+		bool isDownFlick(FlickType flick)
+		{
+			return flick == FlickType::Down || flick == FlickType::DownLeft ||
+			       flick == FlickType::DownRight;
+		}
+
+		int getSusTapType(const Note& note)
+		{
+			if (note.getType() == NoteType::Damage)
+				return 4;
+			if (note.getType() != NoteType::Tap)
+				return 0;
+
+			int type = note.friction ? 5 : 1;
+			if (note.critical)
+				type++;
+			return type;
+		}
+
+		bool isSusLaneAndWidthExportable(const Note& note, int laneOffset)
+		{
+			if (!isIntegerValue(note.lane) || !isIntegerValue(note.width))
+				return false;
+
+			const int susLane = static_cast<int>(note.lane) + laneOffset;
+			const int susWidth = static_cast<int>(note.width);
+			return isBase36Value(susLane) && isBase36Value(susWidth) && susWidth > 0;
+		}
+
+		bool isSusNoteExportable(const Score& score, const Note& note, int laneOffset)
+		{
+			return isLayerValid(score, note.layer) && !note.dummy &&
+			       isSusLaneAndWidthExportable(note, laneOffset);
+		}
+
+		bool isSusHoldExportable(const Score& score, const HoldNote& hold, int laneOffset)
+		{
+			if (hold.dummy || hold.fadeType != FadeType::Out)
+				return false;
+			auto startIt = score.notes.find(hold.start.ID);
+			auto endIt = score.notes.find(hold.end);
+			if (startIt == score.notes.end() || endIt == score.notes.end())
+				return false;
+			if (!isSusNoteExportable(score, startIt->second, laneOffset) ||
+			    !isSusNoteExportable(score, endIt->second, laneOffset))
+				return false;
+			if (hold.start.ease > EaseType::EaseOut)
+				return false;
+
+			for (const auto& step : hold.steps)
+			{
+				auto stepIt = score.notes.find(step.ID);
+				if (stepIt == score.notes.end() ||
+				    !isSusNoteExportable(score, stepIt->second, laneOffset) ||
+				    step.ease > EaseType::EaseOut)
+					return false;
+			}
+			return true;
+		}
+	}
+
+	bool SusCompatibilityReport::hasWarnings() const
+	{
+		return !warnings.empty();
+	}
+
+	bool SusCompatibilityReport::hasErrors() const
+	{
+		return !errors.empty();
+	}
+
 	void SusSerializer::serialize(const Score& score, std::string filename)
 	{
+		if (getCompatibilityReport(score).hasErrors())
+			throw std::runtime_error("Score contains features that cannot be exported to SUS.");
+
 		SUS sus = scoreToSus(score);
 
 		SusExporter exporter{};
-		exporter.dump(sus, filename, exportComment);
+		exporter.dump(sus, filename);
 	}
 
 	Score SusSerializer::deserialize(std::string filename)
@@ -21,41 +156,98 @@ namespace MikuMikuWorld
 
 	bool SusSerializer::canSerialize(const Score& score)
 	{
-		if (score.metadata.laneExtension != 0)
-			return false;
+		return !getCompatibilityReport(score).hasErrors();
+	}
 
-		for (auto& [_, hiSpeed] : score.hiSpeedChanges)
-			if (hiSpeed.layer != 0)
-				return false;
+	SusCompatibilityReport SusSerializer::getCompatibilityReport(const Score& score)
+	{
+		SusCompatibilityReport report;
+		const int laneOffset = getSusLaneOffset(score);
 
-		for (auto& [_, note] : score.notes)
+		if (score.metadata.baseLifePoint != 1000)
+			addWarning(report, "sus_issue_base_life_point");
+		if (!score.waypoints.empty())
+			addWarning(report, "sus_issue_waypoints");
+
+		for (const auto& layer : score.layers)
 		{
-			if (floor(note.width) != note.width || floor(note.lane) != note.lane)
-				return false;
-			if (note.layer != 0)
-				return false;
+			if (layer.isFolder || layer.inFolder || layer.isCollapsed)
+				addWarning(report, "sus_issue_layer_folders");
+			if (layer.forceNoteSpeed != 0.0f)
+				addWarning(report, "sus_issue_force_note_speed");
+		}
+
+		for (const auto& [_, skill] : score.skills)
+		{
+			if (skill.effect != SkillEffect::Score || skill.level != 1)
+				addWarning(report, "sus_issue_skill_details");
+		}
+
+		for (const auto& [_, hiSpeed] : score.hiSpeedChanges)
+		{
+			if (!isLayerValid(score, hiSpeed.layer))
+				addWarning(report, "sus_issue_invalid_layer");
+			if (hiSpeed.skips != 0.0f || hiSpeed.ease != HiSpeedEaseType::None ||
+			    hiSpeed.hideNotes)
+				addWarning(report, "sus_issue_hispeed_details");
+		}
+
+		for (const auto& [_, note] : score.notes)
+		{
+			const bool laneIsInteger = isIntegerValue(note.lane);
+			const bool widthIsInteger = isIntegerValue(note.width);
+
+			if (!laneIsInteger)
+				addWarning(report, "sus_issue_fractional_lane");
+			if (!widthIsInteger)
+				addWarning(report, "sus_issue_fractional_width");
+			if (!isLayerValid(score, note.layer))
+				addWarning(report, "sus_issue_invalid_layer");
 			if (note.dummy)
-				return false;
-			float maxWidth = MAX_NOTE_WIDTH - note.lane;
-			if (note.lane < MIN_LANE || note.lane > MAX_LANE || maxWidth < 0 ||
-			    note.width > maxWidth)
-				return false;
+				addWarning(report, "sus_issue_dummy_notes");
+			if (note.canSoundEffect() && note.soundEffect != SoundEffectType::Default)
+				addWarning(report, "sus_issue_sound_effect");
+			if (note.isFlick() && isDownFlick(note.flick))
+				addWarning(report, "sus_issue_down_flick");
+
+			if (laneIsInteger && widthIsInteger)
+			{
+				const int susLane = static_cast<int>(note.lane) + laneOffset;
+				const int susWidth = static_cast<int>(note.width);
+				if (!isBase36Value(susLane))
+					addWarning(report, "sus_issue_invalid_lane_range");
+				if (!isBase36Value(susWidth) || susWidth == 0)
+					addWarning(report, "sus_issue_invalid_width_range");
+
+				const int susTapType = getSusTapType(note);
+				if (susTapType != 0 && isReservedNextRushTap(susLane, susTapType))
+					addWarning(report, "sus_issue_reserved_event_lane");
+			}
 		}
 
-		for (auto& [_, hold] : score.holdNotes)
+		for (const auto& [_, hold] : score.holdNotes)
 		{
-			if (hold.guideColor != GuideColor::Green && hold.guideColor != GuideColor::Yellow)
-				return false;
 			if (hold.dummy)
-				return false;
+				addWarning(report, "sus_issue_dummy_notes");
+			if (hold.guideColor != GuideColor::Green && hold.guideColor != GuideColor::Yellow)
+				addWarning(report, "sus_issue_guide_color");
 			if (hold.fadeType != FadeType::Out)
-				return false;
-			for (auto& step : hold.steps)
+				addWarning(report, "sus_issue_hold_fade");
+			if (hold.start.layer != HoldStepLayer::Top)
+				addWarning(report, "sus_issue_hold_step_layer");
+			if (hold.start.ease > EaseType::EaseOut)
+				addWarning(report, "sus_issue_hold_ease");
+
+			for (const auto& step : hold.steps)
+			{
 				if (step.ease > EaseType::EaseOut)
-					return false;
+					addWarning(report, "sus_issue_hold_ease");
+				if (step.layer != HoldStepLayer::Top)
+					addWarning(report, "sus_issue_hold_step_layer");
+			}
 		}
 
-		return true;
+		return report;
 	}
 
 	std::string noteKey(const SUSNote& note)
@@ -90,7 +282,7 @@ namespace MikuMikuWorld
 			sus.metadata.data.at("designer"),
 			"",
 			"",
-			sus.metadata.waveOffset * 1000 // seconds -> milliseconds
+			-sus.metadata.waveOffset * 1000 // seconds -> milliseconds
 		};
 
 		std::vector<std::string> hiSpeedGroupNames;
@@ -193,26 +385,32 @@ namespace MikuMikuWorld
 
 		std::unordered_set<std::string> cyanvasStyleCriticalTraces;
 
-		// Cyanvas extension: disable fever and skills
-
 		for (const auto& note : sus.taps)
 		{
-			/* if (note.type == 4) */
-			/* { */
-			/* skills.push_back(SkillTrigger{ nextSkillID++, note.tick }); */
-			/* } */
-			/* else if (note.lane == 15 && note.width == 1) */
-			/* { */
-			/* 	if (note.type == 1) */
-			/* 		fever.startTick = note.tick; */
-			/* 	else if (note.type == 2) */
-			/* 		fever.endTick = note.tick; */
-			/* } */
-			/* else if (note.type == 7 || note.type == 8) */
-			/* { */
-			/* 	// Invisible slide tap point */
-			/* 	continue; */
-			/* } */
+			if (note.lane == 0 && note.type == 4)
+			{
+				id_t id = getNextSkillID();
+				skills[id] = SkillTrigger{ id, note.tick, SkillEffect::Score, 1 };
+				continue;
+			}
+			if (note.lane == 15)
+			{
+				if (note.type == 1)
+				{
+					fever.startTick = note.tick;
+					continue;
+				}
+				if (note.type == 2)
+				{
+					fever.endTick = note.tick;
+					continue;
+				}
+			}
+			if (note.type == 7 || note.type == 8)
+			{
+				// Invisible slide tap point
+				continue;
+			}
 
 			if (!sus.sideLane && (note.lane - 2 < MIN_LANE || note.lane - 2 > MAX_LANE))
 				continue;
@@ -457,8 +655,8 @@ namespace MikuMikuWorld
 
 	SUS SusSerializer::scoreToSus(const Score& score)
 	{
-		constexpr std::array<int, static_cast<int>(FlickType::FlickTypeCount)> flickToType{ 0, 1, 3,
-			                                                                                4 };
+		constexpr std::array<int, static_cast<int>(FlickType::FlickTypeCount)> flickToType{ 0, 1, 3, 4,
+			                                                                                0, 0, 0 };
 
 		int offset = score.metadata.laneExtension == 0 ? 2 : score.metadata.laneExtension;
 
@@ -487,6 +685,9 @@ namespace MikuMikuWorld
 		std::unordered_set<std::string> criticalKeys;
 		for (const auto& [id, note] : score.notes)
 		{
+			if (!isSusNoteExportable(score, note, offset))
+				continue;
+
 			if (note.getType() == NoteType::Tap)
 			{
 				int type = note.friction ? 5 : 1;
@@ -499,9 +700,12 @@ namespace MikuMikuWorld
 				                        hiSpeedGroupNames[note.layer] });
 
 				if (note.isFlick())
-					directionals.push_back(SUSNote{ note.tick, (int)note.lane + offset,
-					                                (int)note.width,
-					                                flickToType[static_cast<int>(note.flick)] });
+				{
+					const int flickType = flickToType[static_cast<int>(note.flick)];
+					if (flickType != 0)
+						directionals.push_back(SUSNote{ note.tick, (int)note.lane + offset,
+						                                (int)note.width, flickType });
+				}
 			}
 			if (note.getType() == NoteType::Damage)
 				taps.push_back(SUSNote{ note.tick, (int)note.lane + offset, (int)note.width, 4,
@@ -517,7 +721,10 @@ namespace MikuMikuWorld
 		exportHolds.reserve(score.holdNotes.size());
 
 		for (const auto& [_, hold] : score.holdNotes)
-			exportHolds.emplace_back(hold);
+		{
+			if (isSusHoldExportable(score, hold, offset))
+				exportHolds.emplace_back(hold);
+		}
 
 		std::sort(exportHolds.begin(), exportHolds.end(),
 		          [&score](const HoldNote& a, const HoldNote& b)
@@ -588,8 +795,10 @@ namespace MikuMikuWorld
 			// Hidden and guide slides do not have flicks
 			if (end.isFlick() && hold.endType == HoldNoteType::Normal)
 			{
-				directionals.push_back(SUSNote{ end.tick, (int)end.lane + offset, (int)end.width,
-				                                flickToType[static_cast<int>(end.flick)] });
+				const int flickType = flickToType[static_cast<int>(end.flick)];
+				if (flickType != 0)
+					directionals.push_back(SUSNote{ end.tick, (int)end.lane + offset,
+					                                (int)end.width, flickType });
 				// Critical friction notes use type 6 not 2
 				if (end.critical && !start.critical && !end.friction)
 					taps.push_back(SUSNote{ end.tick, (int)end.lane + offset, (int)end.width, 2 });
@@ -657,7 +866,7 @@ namespace MikuMikuWorld
 		}
 		metadata.requests.push_back("lane_offset " + std::to_string(laneOffset));
 		// milliseconds -> seconds
-		metadata.waveOffset = score.metadata.musicOffset / 1000.0f;
+		metadata.waveOffset = -score.metadata.musicOffset / 1000.0f;
 
 		std::vector<HiSpeedGroup> hiSpeedGroup;
 

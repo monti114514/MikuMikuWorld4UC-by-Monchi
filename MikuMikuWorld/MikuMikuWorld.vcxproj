@@ -339,6 +339,7 @@
     <ClInclude Include="Score\Serialization\SUS.h" />
     <ClInclude Include="Score\Serialization\SusExporter.h" />
     <ClInclude Include="Score\Serialization\SusParser.h" />
+    <ClInclude Include="Score\Serialization\SusCompatibilityReport.h" />
     <ClInclude Include="Score\Serialization\SusSerializer.h" />
     <ClInclude Include="Tempo.h" />
     <ClInclude Include="ScoreEditor\Timeline\TimelineEventControls.h" />

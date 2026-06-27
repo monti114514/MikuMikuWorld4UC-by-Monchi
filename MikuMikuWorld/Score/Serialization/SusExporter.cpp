@@ -211,14 +211,9 @@ namespace MikuMikuWorld
 		return lines;
 	}
 
-	void SusExporter::dump(const SUS& sus, const std::string& filename, std::string comment)
+	void SusExporter::dump(const SUS& sus, const std::string& filename, std::string /*comment*/)
 	{
 		std::vector<std::string> lines;
-		if (!comment.empty())
-		{
-			// Make sure the comment is ignored by parsers.
-			lines.push_back(comment.substr(comment.find_first_not_of("#")));
-		}
 
 		// Write metadata
 		for (const auto& [attrKey, attrValue] : sus.metadata.data)
