@@ -142,7 +142,6 @@ namespace MikuMikuWorld
 		bool debugEnabled;
 		std::vector<std::string> pinnedQuickSettings;
 		GalleryConfiguration gallery;
-		bool hasGallerySettings = false;
 
 		float pvNoteSpeed{ 10.0f };
 		float pvStageOpacity{ 1.0f };

@@ -186,8 +186,12 @@
     <ClCompile Include="BinaryReader.cpp" />
     <ClCompile Include="BinaryWriter.cpp" />
     <ClCompile Include="Gallery\ChartGalleryWindow.cpp" />
+    <ClCompile Include="Gallery\ChartGalleryWindowCardGrid.cpp" />
     <ClCompile Include="Gallery\ChartGalleryWindowConfig.cpp" />
     <ClCompile Include="Gallery\ChartGalleryWindowData.cpp" />
+    <ClCompile Include="Gallery\ChartGalleryWindowDeleteDialog.cpp" />
+    <ClCompile Include="Gallery\ChartGalleryWindowMainView.cpp" />
+    <ClCompile Include="Gallery\ChartGalleryWindowSidebar.cpp" />
     <ClCompile Include="File.cpp" />
     <ClCompile Include="ScoreEditor\Context\HistoryManager.cpp" />
     <ClCompile Include="ImGuiManager.cpp" />

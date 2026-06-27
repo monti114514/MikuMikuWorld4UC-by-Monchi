@@ -258,10 +258,22 @@
     <ClCompile Include="Gallery\ChartGalleryWindow.cpp">
       <Filter>Gallery</Filter>
     </ClCompile>
+    <ClCompile Include="Gallery\ChartGalleryWindowCardGrid.cpp">
+      <Filter>Gallery</Filter>
+    </ClCompile>
     <ClCompile Include="Gallery\ChartGalleryWindowConfig.cpp">
       <Filter>Gallery</Filter>
     </ClCompile>
     <ClCompile Include="Gallery\ChartGalleryWindowData.cpp">
+      <Filter>Gallery</Filter>
+    </ClCompile>
+    <ClCompile Include="Gallery\ChartGalleryWindowDeleteDialog.cpp">
+      <Filter>Gallery</Filter>
+    </ClCompile>
+    <ClCompile Include="Gallery\ChartGalleryWindowMainView.cpp">
+      <Filter>Gallery</Filter>
+    </ClCompile>
+    <ClCompile Include="Gallery\ChartGalleryWindowSidebar.cpp">
       <Filter>Gallery</Filter>
     </ClCompile>
   </ItemGroup>

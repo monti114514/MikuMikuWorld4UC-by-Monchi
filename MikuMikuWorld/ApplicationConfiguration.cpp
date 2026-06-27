@@ -199,7 +199,6 @@ namespace MikuMikuWorld
 		if (jsonIO::keyExists(configJson, "gallery"))
 		{
 			const json& galleryJson = configJson["gallery"];
-			hasGallerySettings = true;
 			gallery = GalleryConfiguration{};
 
 			if (galleryJson.contains("charts") && galleryJson["charts"].is_object())
@@ -229,10 +228,6 @@ namespace MikuMikuWorld
 					if (path.is_string())
 						gallery.searchPaths.push_back(path.get<std::string>());
 				}
-			}
-			else if (galleryJson.contains("searchPath") && galleryJson["searchPath"].is_string())
-			{
-				gallery.searchPaths.push_back(galleryJson["searchPath"].get<std::string>());
 			}
 
 			gallery.isSearchPathsOpen =
@@ -340,6 +335,7 @@ namespace MikuMikuWorld
 
 		config["pinnedQuickSettings"] = pinnedQuickSettings;
 
+		config["gallery"]["charts"] = json::object();
 		for (const auto& [filepath, state] : gallery.charts)
 		{
 			if (state.isFavorite || state.folder != "-")
@@ -441,7 +437,6 @@ namespace MikuMikuWorld
 		seVolume = 1.0f;
 		pinnedQuickSettings = { "masterVolume", "bgmVolume", "seVolume" };
 		gallery = GalleryConfiguration{};
-		hasGallerySettings = false;
 
 		debugEnabled = false;
 	}
