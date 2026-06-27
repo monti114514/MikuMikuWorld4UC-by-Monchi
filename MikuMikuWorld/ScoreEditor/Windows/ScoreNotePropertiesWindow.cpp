@@ -186,26 +186,34 @@ namespace MikuMikuWorld
 					if (context.score.timeSignatures.find((int)selectedMeta.key) !=
 					    context.score.timeSignatures.end())
 					{
-						TimeSignature& ts = context.score.timeSignatures[(int)selectedMeta.key];
+						int selectedMeasure = (int)selectedMeta.key;
+						TimeSignature& ts = context.score.timeSignatures[selectedMeasure];
 						int measure = ts.measure;
-						if (UI::addIntProperty(getString("measure"), measure, 0, INT_MAX))
+						if (measure == 0)
 						{
-							if (measure != ts.measure &&
+							UI::addReadOnlyProperty(getString("measure"), measure);
+						}
+						else if (UI::addIntProperty(getString("measure"), measure, 0, INT_MAX))
+						{
+							if (measure != selectedMeasure &&
 							    context.score.timeSignatures.find(measure) ==
 							        context.score.timeSignatures.end())
 							{
 								TimeSignature moved = ts;
-								context.score.timeSignatures.erase(ts.measure);
+								context.score.timeSignatures.erase(selectedMeasure);
 								moved.measure = measure;
 								context.score.timeSignatures[measure] = moved;
 								context.selectedMetaEvents.clear();
 								context.selectedMetaEvents.insert(
 								    { MetaEventKind::TimeSignature, static_cast<id_t>(measure) });
+								selectedMeasure = measure;
 								edited = true;
 							}
 						}
-						TimeSignature& updatedTs =
-						    context.score.timeSignatures[(int)context.selectedMetaEvents.begin()->key];
+						auto updatedTsIt = context.score.timeSignatures.find(selectedMeasure);
+						if (updatedTsIt == context.score.timeSignatures.end())
+							break;
+						TimeSignature& updatedTs = updatedTsIt->second;
 						if (UI::timeSignatureSelect(updatedTs.numerator, updatedTs.denominator))
 						{
 							updatedTs.numerator =
@@ -509,7 +517,8 @@ namespace MikuMikuWorld
 					if (note.getType() == NoteType::HoldEnd && !isGuide)
 					{
 						if (UI::addFlickSelectPropertyWithNone(getString("flick"), note.flick,
-						                                       flickTypes, arrayLength(flickTypes)))
+						                                       flickDirectionKeys,
+						                                       arrayLength(flickDirectionKeys)))
 						{
 							context.score.notes.at(hold.start.ID).flick = note.flick;
 							for (auto& id : context.selectedNotes)
@@ -546,8 +555,9 @@ namespace MikuMikuWorld
 					}
 					edited = true;
 				}
-				if (UI::addFlickSelectPropertyWithNone(getString("flick"), note.flick, flickTypes,
-				                                       arrayLength(flickTypes)))
+				if (UI::addFlickSelectPropertyWithNone(getString("flick"), note.flick,
+				                                       flickDirectionKeys,
+				                                       arrayLength(flickDirectionKeys)))
 				{
 					for (auto& id : context.selectedNotes)
 					{
