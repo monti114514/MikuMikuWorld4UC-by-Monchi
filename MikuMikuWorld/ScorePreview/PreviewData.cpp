@@ -18,7 +18,8 @@ namespace MikuMikuWorld::Engine
 			return t < node.tick;
 		});
 		if (it != nodes.begin()) --it;
-		return it->stm + (tick - it->tick) * it->speedPerTick;
+		const double deltaTime = (tick - it->tick) * it->secondsPerTick;
+		return it->stm + deltaTime * it->speed + 0.5 * it->speedSlope * deltaTime * deltaTime;
 	}
 
 	struct DrawingHoldStep
@@ -63,17 +64,50 @@ namespace MikuMikuWorld::Engine
 				for (int tick : boundaries)
 				{
 					double stm = accumulateScaledDuration(tick, TICKS_PER_BEAT, score.tempoChanges, score.hiSpeedChanges, layer);
+					double time = accumulateDuration(tick, TICKS_PER_BEAT, score.tempoChanges);
 					
 					double bpm = 120.0;
 					for (auto it = score.tempoChanges.rbegin(); it != score.tempoChanges.rend(); ++it)
 						if (it->tick <= tick) { bpm = it->bpm; break; }
 
 					double speed = 1.0;
-					for (auto it = hsList.rbegin(); it != hsList.rend(); ++it)
-						if (it->tick <= tick) { speed = it->speed; break; }
+					double speedSlope = 0.0;
+					const HiSpeedChange* activeHiSpeed = nullptr;
+					const HiSpeedChange* nextHiSpeed = nullptr;
+					for (const HiSpeedChange& hs : hsList)
+					{
+						if (hs.tick <= tick)
+						{
+							activeHiSpeed = &hs;
+							continue;
+						}
+						nextHiSpeed = &hs;
+						break;
+					}
 
-					double speedPerTick = (60.0 / bpm) * speed / TICKS_PER_BEAT;
-					hsCache[layer].nodes.push_back({ tick, stm, speedPerTick });
+					if (activeHiSpeed != nullptr)
+					{
+						speed = activeHiSpeed->speed;
+						if (activeHiSpeed->ease == HiSpeedEaseType::Linear && nextHiSpeed != nullptr)
+						{
+							const double activeTime =
+							    accumulateDuration(activeHiSpeed->tick, TICKS_PER_BEAT,
+							                       score.tempoChanges);
+							const double nextTime =
+							    accumulateDuration(nextHiSpeed->tick, TICKS_PER_BEAT,
+							                       score.tempoChanges);
+							const double timeDiff = nextTime - activeTime;
+							if (timeDiff > 1e-6)
+							{
+								speedSlope = (nextHiSpeed->speed - activeHiSpeed->speed) / timeDiff;
+								speed = activeHiSpeed->speed + speedSlope * (time - activeTime);
+							}
+						}
+					}
+
+					const double secondsPerTick = (60.0 / bpm) / TICKS_PER_BEAT;
+					hsCache[layer].nodes.push_back(
+					    { tick, time, stm, secondsPerTick, speed, speedSlope });
 				}
 			}
 

@@ -66,8 +66,11 @@ namespace MikuMikuWorld::Engine
 	struct HiSpeedCacheNode
 	{
 		int tick;
+		double time;
 		double stm;
-		double speedPerTick;
+		double secondsPerTick;
+		double speed;
+		double speedSlope;
 	};
 
 	struct LayerHiSpeedCache
