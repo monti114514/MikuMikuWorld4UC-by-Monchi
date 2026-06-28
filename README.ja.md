@@ -26,5 +26,5 @@ MikuMikuWorld for UntitledCharts から継承した機能に加えて、MMW4UCby
 
 ## ダウンロード
 
-最新版は [releases page](https://github.com/UntitledCharts/MikuMikuWorld4UC/releases/latest) からダウンロードできます。
+最新版は [releases page](https://github.com/monti114514/MikuMikuWorld4UC-by-Monchi/releases/latest) からダウンロードできます。
 
