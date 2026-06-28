@@ -26,5 +26,5 @@ Earlier versions of Windows may work but are not tested.
 
 ## Download
 
-The latest version can be downloaded from the [releases page](https://github.com/UntitledCharts/MikuMikuWorld4UC/releases/latest).
+The latest version can be downloaded from the [releases page](https://github.com/monti114514/MikuMikuWorld4UC-by-Monchi/releases/latest).
 
