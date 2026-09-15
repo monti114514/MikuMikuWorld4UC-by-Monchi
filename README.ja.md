@@ -8,7 +8,7 @@ MikuMikuWorld for UntitledCharts by Monchi（MMW4UCbyMonchi）は、[MikuMikuWor
 
 ## 追加機能
 
-MikuMikuWorld for UntitledCharts から継承した機能に加えて、MMW4UCbyMonchi 用の変更が含まれています。
+MikuMikuWorld for UntitledCharts から継承した機能に加えて、MMW4UC by Monchi 用の変更が含まれています。
 
 ## 翻訳
 
